@@ -39,3 +39,14 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Local AI/editor folders
+.claude/
+
+# Supabase local temp/cache
+supabase/.temp/
