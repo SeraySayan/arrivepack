@@ -11,8 +11,9 @@ const ITINERARY_3_DAY: ItineraryDay[] = [
   {
     day: 1,
     title: 'Arrival & Easy First Night',
-    theme: 'Settle in and soak up Cairo',
+    theme: 'Settle in and start calmly',
     summary: 'Arrive, check in, and explore your neighbourhood. Low intensity to recover from travel.',
+    chips: ['Easy start', 'Low walking'],
     morning: [
       {
         id: 'act_1_1',
@@ -82,8 +83,9 @@ const ITINERARY_3_DAY: ItineraryDay[] = [
   {
     day: 2,
     title: 'Giza Without the Chaos',
-    theme: 'The Pyramids, early and smart',
+    theme: 'Pyramids early, then slow down',
     summary: 'Hit the Pyramids early before the heat and crowds. Afternoon recovery and evening in Zamalek.',
+    chips: ['Best early', 'High walking'],
     morning: [
       {
         id: 'act_2_1',
@@ -163,9 +165,10 @@ const ITINERARY_3_DAY: ItineraryDay[] = [
   },
   {
     day: 3,
-    title: 'Historic Cairo & Departure',
-    theme: 'Old city, markets, and farewell',
-    summary: 'Explore Islamic Cairo, souvenir shopping, and head to the airport.',
+    title: 'Historic Cairo & Old City',
+    theme: 'Mosques, markets, and local lunch',
+    summary: 'Explore Islamic Cairo — the bazaar, Al-Azhar Mosque, and a proper local lunch.',
+    chips: ['Culture day', 'Moderate walking'],
     morning: [
       {
         id: 'act_3_1',
@@ -193,37 +196,26 @@ const ITINERARY_3_DAY: ItineraryDay[] = [
     afternoon: [
       {
         id: 'act_3_3',
-        title: 'Final Lunch — Local Restaurant',
-        description: 'Last Egyptian meal before departure. Try koshary or local grilled dishes.',
+        title: 'Local lunch in Old Cairo',
+        description: 'Try koshary or local grilled dishes near Khan el-Khalili.',
         category: 'Food',
         estimatedDuration: '1 hr',
         estimatedCostLevel: 'low',
         transportNote: 'Near Khan el-Khalili',
-        whyItFits: 'Don\'t leave without tasting authentic Egyptian food.',
-        trust: sampleTrust,
-      },
-      {
-        id: 'act_3_4',
-        title: 'Return to Hotel & Pack',
-        description: 'Check out, pack, and prepare for airport transfer.',
-        category: 'Admin',
-        estimatedDuration: '1.5 hrs',
-        estimatedCostLevel: 'low',
-        transportNote: 'Uber to hotel, then to airport',
-        whyItFits: 'Build in enough time for Cairo airport check-in.',
+        whyItFits: 'Authentic Egyptian food in a great setting.',
         trust: sampleTrust,
       },
     ],
     evening: [
       {
-        id: 'act_3_5',
-        title: 'Airport & Departure',
-        description: 'Head to Cairo Airport. Arrive at least 3 hours before international flights.',
-        category: 'Transport',
-        estimatedDuration: '3+ hrs',
-        estimatedCostLevel: 'medium',
-        transportNote: 'Uber/Careem or hotel transfer to airport',
-        whyItFits: 'Allow plenty of time for Cairo Airport.',
+        id: 'act_3_4',
+        title: 'Explore Old Cairo by evening',
+        description: 'The old city neighbourhood feels different after the tourist rush. Walk and discover.',
+        category: 'Exploration',
+        estimatedDuration: '1–1.5 hrs',
+        estimatedCostLevel: 'low',
+        transportNote: 'Walking in Old Cairo area',
+        whyItFits: 'Relaxed and atmospheric end to the day.',
         trust: sampleTrust,
       },
     ],
@@ -231,17 +223,17 @@ const ITINERARY_3_DAY: ItineraryDay[] = [
       {
         id: 'act_3_alt_1',
         title: 'Egyptian Museum (Cairo)',
-        description: 'If time allows before flight, the Egyptian Museum near Tahrir Square is world-class.',
+        description: 'If you prefer museums, the Egyptian Museum near Tahrir Square is world-class.',
         category: 'Museum',
         estimatedDuration: '2 hrs',
         estimatedCostLevel: 'medium',
         transportNote: 'Uber to Tahrir Square',
-        whyItFits: 'If your flight is late, this is worth adding.',
+        whyItFits: 'Great alternative if you\'ve already done Khan el-Khalili.',
         trust: sampleTrust,
       },
     ],
     estimatedCostLevel: 'medium',
-    transportSuggestion: 'Uber/Careem throughout. Allow extra time for airport.',
+    transportSuggestion: 'Uber/Careem to Old Cairo. Walking around the bazaar area.',
   },
 ];
 
@@ -249,8 +241,9 @@ const EXTRA_DAYS_4_5: ItineraryDay[] = [
   {
     day: 4,
     title: 'Egyptian Museum & Tahrir',
-    theme: 'Culture, history, and the world\'s best collection',
-    summary: 'Spend the morning at the Egyptian Museum. Afternoon at your own pace.',
+    theme: 'Ancient history and central Cairo',
+    summary: 'Spend the morning at the Egyptian Museum. Afternoon at Cairo Citadel and Moez Street.',
+    chips: ['Museum day', 'Moderate walking'],
     morning: [
       {
         id: 'act_4_1',
@@ -310,6 +303,7 @@ const EXTRA_DAYS_4_5: ItineraryDay[] = [
     title: 'Markets, Local Life & Hidden Cairo',
     theme: 'Explore like a local',
     summary: 'Skip the tourist trail. Find local markets, neighbourhood cafes, and authentic spots.',
+    chips: ['Local food', 'Flexible'],
     morning: [
       {
         id: 'act_5_1',
@@ -337,7 +331,7 @@ const EXTRA_DAYS_4_5: ItineraryDay[] = [
       },
       {
         id: 'act_5_3',
-        title: 'Grand Egyptian Museum Revisit or GEM',
+        title: 'Grand Egyptian Museum or extra Cairo time',
         description: 'If you haven\'t visited the new Grand Egyptian Museum yet, this is your chance.',
         category: 'Museum',
         estimatedDuration: '2–3 hrs',
@@ -370,8 +364,9 @@ const EXTRA_DAYS_6_7: ItineraryDay[] = [
   {
     day: 6,
     title: 'Optional Day Trip or Flexible Day',
-    theme: 'Slower pace or day trip',
+    theme: 'Slower pace or extra adventure',
     summary: 'Take it easy or choose an optional day trip outside Cairo.',
+    chips: ['Flexible day', 'Book ahead'],
     morning: [
       {
         id: 'act_6_1',
@@ -417,9 +412,10 @@ const EXTRA_DAYS_6_7: ItineraryDay[] = [
   },
   {
     day: 7,
-    title: 'Final Day — Last Walk, Souvenirs & Departure',
-    theme: 'Absorb the last of Cairo',
-    summary: 'Last morning to soak it all in, final shopping, and departure.',
+    title: 'Final Day — Last Walk & Souvenirs',
+    theme: 'Slow morning before departure',
+    summary: 'Last morning to soak it all in, final shopping, and head to the airport.',
+    chips: ['Easy day', 'Budget-friendly'],
     morning: [
       {
         id: 'act_7_1',

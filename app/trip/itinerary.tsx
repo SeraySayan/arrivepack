@@ -11,6 +11,7 @@ import {
 import { router } from 'expo-router';
 import * as Haptics from '../../src/utils/haptics';
 import { useTripStore } from '../../src/store/tripStore';
+import { getItinerary } from '../../src/services/itineraryEngine';
 import ItineraryDayCard from '../../src/components/trip/ItineraryDayCard';
 import EmptyState from '../../src/components/ui/EmptyState';
 import { Colors } from '../../src/theme/colors';
@@ -21,7 +22,13 @@ import { formatBudgetStyle, formatTravelStyle } from '../../src/utils/formatters
 export default function ItineraryScreen() {
   const { trip } = useTripStore();
 
-  if (!trip || trip.itinerary.length === 0) {
+  // Always derive from the current mock data so content updates take effect
+  // without requiring the user to recreate their trip.
+  const itinerary = trip
+    ? getItinerary(trip.destinationId, trip.durationDays, trip.budgetStyle, trip.travelStyle)
+    : [];
+
+  if (!trip || itinerary.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
         <Pressable onPress={() => router.back()} style={styles.back}>
@@ -50,13 +57,19 @@ export default function ItineraryScreen() {
         </Text>
 
         <View style={styles.trustBanner}>
+          <View style={styles.trustBannerRow}>
+            <Text style={styles.trustBannerTitle}>Flexible sample plan</Text>
+            <View style={styles.trustBannerBadge}>
+              <Text style={styles.trustBannerBadgeText}>Sample itinerary</Text>
+            </View>
+          </View>
           <Text style={styles.trustText}>
-            📋 Sample itinerary — personalised based on your selections. Adapt freely as needed.
+            Built from your travel style. Adjust days based on weather, energy, opening hours, and bookings.
           </Text>
         </View>
 
         <View style={styles.list}>
-          {trip.itinerary.map((day, i) => (
+          {itinerary.map((day, i) => (
             <ItineraryDayCard
               key={day.day}
               day={day}
@@ -87,12 +100,37 @@ const styles = StyleSheet.create({
   title: { ...Typography.h1, color: Colors.text },
   subtitle: { ...Typography.body, color: Colors.muted, marginTop: 4, marginBottom: Spacing.base },
   trustBanner: {
-    backgroundColor: Colors.borderLight,
-    borderRadius: Radii.lg,
-    padding: Spacing.md,
+    backgroundColor: Colors.cardWhite,
+    borderRadius: Radii.card,
+    padding: Spacing.cardPad,
     marginBottom: Spacing.base,
     borderWidth: 1,
     borderColor: Colors.border,
+    gap: 6,
+  },
+  trustBannerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  trustBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  trustBannerBadge: {
+    backgroundColor: Colors.borderLight,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  trustBannerBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: Colors.mutedLight,
   },
   trustText: { ...Typography.caption, color: Colors.muted, lineHeight: 18 },
   list: { gap: Spacing.sm },

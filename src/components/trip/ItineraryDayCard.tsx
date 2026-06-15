@@ -62,6 +62,17 @@ export default function ItineraryDayCard({ day, onPress, isActive = false }: Pro
           ))}
         </View>
 
+        {/* Chips */}
+        {day.chips && day.chips.length > 0 && (
+          <View style={styles.chips}>
+            {day.chips.slice(0, 3).map((chip) => (
+              <View key={chip} style={styles.chip}>
+                <Text style={styles.chipText}>{chip}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         <View style={styles.footer}>
           <View style={[styles.costBadge, { backgroundColor: COST_COLORS[day.estimatedCostLevel] + '20' }]}>
             <Text style={[styles.costText, { color: COST_COLORS[day.estimatedCostLevel] }]}>
@@ -138,6 +149,26 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: Colors.textSecondary,
     flex: 1,
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
+    marginTop: 5,
+  },
+  chip: {
+    backgroundColor: Colors.borderLight,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  chipText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: Colors.muted,
+    letterSpacing: 0.1,
   },
   footer: {
     flexDirection: 'row',

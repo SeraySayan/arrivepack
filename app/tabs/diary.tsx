@@ -9,11 +9,13 @@ import {
   Modal,
   Pressable,
   StatusBar,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from '../../src/utils/haptics';
 import { useTripStore } from '../../src/store/tripStore';
 import DiaryPlaceCard from '../../src/components/trip/DiaryPlaceCard';
+import TravelMemoryMap from '../../src/components/trip/TravelMemoryMap';
 import AppButton from '../../src/components/ui/AppButton';
 import EmptyState from '../../src/components/ui/EmptyState';
 import AppToast from '../../src/components/ui/AppToast';
@@ -180,32 +182,9 @@ export default function DiaryScreen() {
           </View>
         </FadeInView>
 
-        {/* Map placeholder */}
+        {/* Travel memory map */}
         <FadeInView delay={120}>
-          <LinearGradient
-            colors={['#0F172A', '#0F2E2B', '#0D3340']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.mapPlaceholder}
-          >
-            <View style={styles.mapGlow} />
-            <Text style={styles.mapTitle}>📍 Your Egypt map</Text>
-            <View style={styles.mapContent}>
-              {visitedPlaces.length === 0 ? (
-                <Text style={styles.mapEmpty}>Your pins will appear here as you explore.</Text>
-              ) : (
-                visitedPlaces.slice(0, 4).map((p) => (
-                  <View key={p.id} style={styles.mapPin}>
-                    <Text style={styles.mapPinEmoji}>📍</Text>
-                    <Text style={styles.mapPinLabel} numberOfLines={1}>
-                      {p.name}
-                    </Text>
-                  </View>
-                ))
-              )}
-            </View>
-            <Text style={styles.mapNote}>Maps integration coming in V2</Text>
-          </LinearGradient>
+          <TravelMemoryMap savedPlaces={savedPlaces} visitedPlaces={visitedPlaces} />
         </FadeInView>
 
         {/* Tabs */}
@@ -236,7 +215,12 @@ export default function DiaryScreen() {
 
       {/* Note modal */}
       <Modal visible={!!noteModalPlace} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
+          <Pressable style={styles.modalDismiss} onPress={() => setNoteModalPlace(null)} />
           <View style={styles.modalCard}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Add a note</Text>
@@ -257,7 +241,7 @@ export default function DiaryScreen() {
               <AppButton label="Save note" onPress={handleSaveNote} />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <AppToast message={toastMessage} visible={toastVisible} />
@@ -299,37 +283,6 @@ const styles = StyleSheet.create({
   statValue: { ...Typography.h2, fontWeight: '800' },
   statLabel: { ...Typography.caption, color: Colors.muted, textAlign: 'center', fontSize: 11 },
 
-  mapPlaceholder: {
-    borderRadius: 22,
-    padding: Spacing.cardPadLg,
-    marginBottom: Spacing.lg,
-    gap: Spacing.sm,
-    overflow: 'hidden',
-    ...Shadows.md,
-  },
-  mapGlow: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: '#14B8A6',
-    opacity: 0.12,
-    top: -60,
-    right: -40,
-  },
-  mapTitle: { ...Typography.h4, color: '#FFFFFF', fontWeight: '700' },
-  mapContent: { minHeight: 80, justifyContent: 'center' },
-  mapEmpty: {
-    ...Typography.body,
-    color: 'rgba(255,255,255,0.5)',
-    textAlign: 'center',
-    paddingVertical: Spacing.base,
-  },
-  mapPin: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingVertical: 4 },
-  mapPinEmoji: { fontSize: 16 },
-  mapPinLabel: { ...Typography.bodySm, color: '#FFFFFF', flex: 1 },
-  mapNote: { ...Typography.caption, color: 'rgba(255,255,255,0.4)', textAlign: 'center' },
-
   tabs: {
     flexDirection: 'row',
     backgroundColor: '#E9EEF5',
@@ -368,7 +321,12 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { ...Typography.captionBold, color: Colors.tealDark, fontWeight: '700' },
 
-  modalOverlay: { flex: 1, backgroundColor: Colors.overlay, justifyContent: 'flex-end' },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: Colors.overlay,
+  },
+  modalDismiss: { flex: 1 },
   modalCard: {
     backgroundColor: Colors.cardWhite,
     borderTopLeftRadius: 28,

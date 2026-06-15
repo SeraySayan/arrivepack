@@ -93,6 +93,8 @@ export interface ItineraryDay {
   alternatives: Activity[];
   estimatedCostLevel: CostLevel;
   transportSuggestion: string;
+  /** Optional compact context chips shown on the overview card. Max 2–3. */
+  chips?: string[];
 }
 
 export interface Place {
