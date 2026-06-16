@@ -109,6 +109,13 @@ export interface Place {
   coordinates?: { latitude: number; longitude: number };
 }
 
+export type StayAreaId =
+  | 'zamalek'
+  | 'downtown'
+  | 'garden_city'
+  | 'giza'
+  | 'new_cairo';
+
 export interface Trip {
   id: string;
   destinationId: string;
@@ -117,11 +124,38 @@ export interface Trip {
   budgetStyle: BudgetStyle;
   travelStyle: TravelStyle;
   expectationNote?: string;
+  /** User-selected Cairo stay area — null means not yet chosen. */
+  stayArea?: StayAreaId | null;
   readiness: ReadinessState;
+  /** Seed itinerary stored at trip creation — used by legacy actions only. */
   itinerary: ItineraryDay[];
   savedPlaces: Place[];
   visitedPlaces: Place[];
   createdAt: string;
+  /**
+   * AI-adjusted itinerary set by the user via the adjust-itinerary Edge Function.
+   * When present, both the list page and the day-detail page display these days.
+   * When null/absent the rule-based engine result is used instead.
+   */
+  adjustedItinerary?: ItineraryDay[] | null;
+  /** Tracks which source is currently being displayed. */
+  itinerarySource?: 'default' | 'ai_adjusted';
+  /** Human-readable summary of the last AI adjustment (for the success card). */
+  itinerarySummary?: string;
+  /** Bullet-point list of changes made by the last AI adjustment. */
+  itineraryChangesMade?: string[];
+  /**
+   * The trip context that was active when the AI adjustment was created.
+   * `getActiveItinerary` compares this against the current trip fields and
+   * discards the AI plan if any context field has changed since it was generated.
+   */
+  adjustedItineraryContext?: {
+    destinationId: string;
+    durationDays: number;
+    budgetStyle: BudgetStyle;
+    travelStyle: TravelStyle;
+    stayArea: StayAreaId | null | undefined;
+  } | null;
 }
 
 export interface Destination {

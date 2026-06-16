@@ -1,5 +1,4 @@
-import type { ItineraryDay, TrustMeta } from '../types';
-import type { BudgetStyle, TravelStyle } from '../types';
+import type { ItineraryDay, TrustMeta, BudgetStyle, TravelStyle, StayAreaId } from '../types';
 
 const sampleTrust: TrustMeta = {
   sourceType: 'sample_data',
@@ -651,29 +650,146 @@ const EXTRA_DAYS_8_10: ItineraryDay[] = [
   },
 ];
 
+/* ── Stay-area-aware transport notes ── */
+
+function applyStayAreaContext(
+  days: ItineraryDay[],
+  stayArea: StayAreaId | null
+): ItineraryDay[] {
+  if (!stayArea) return days;
+
+  return days.map((day) => {
+    // Adjust Day 2 transport to reflect where the user is staying
+    if (day.day === 2) {
+      const gizaDistance =
+        stayArea === 'giza'
+          ? 'Walking distance or short taxi to pyramids entrance'
+          : stayArea === 'new_cairo'
+          ? 'Uber to Giza — ~50–60 min from New Cairo'
+          : stayArea === 'downtown' || stayArea === 'garden_city'
+          ? 'Uber to Giza — ~30 min from central Cairo'
+          : 'Uber to Giza — ~35 min from Zamalek';
+
+      return {
+        ...day,
+        morning: day.morning.map((act) =>
+          act.id === 'act_2_1'
+            ? { ...act, transportNote: gizaDistance }
+            : act
+        ),
+        transportSuggestion: `${gizaDistance}. Walking in afternoon.`,
+      };
+    }
+    return day;
+  });
+}
+
+/* ── Travel-style tweaks ── */
+
+function applyTravelStyle(
+  days: ItineraryDay[],
+  travelStyle: TravelStyle
+): ItineraryDay[] {
+  const isLocalFocus =
+    travelStyle === 'explore_like_local' || travelStyle === 'food_local';
+  const isRelaxed =
+    travelStyle === 'relaxed_safe' || travelStyle === 'romantic';
+  const isHistory = travelStyle === 'history_culture';
+
+  return days.map((day) => {
+    // For local/food styles: flag Day 5 as the standout local day
+    if (day.day === 5 && isLocalFocus) {
+      return {
+        ...day,
+        chips: ['Local food', 'Neighbourhood walk', 'Flexible'],
+        theme: 'Local markets, food, and hidden Cairo',
+      };
+    }
+    // For relaxed/romantic styles: tone down walking chips
+    if (isRelaxed && day.chips?.includes('High walking')) {
+      return {
+        ...day,
+        chips: day.chips.map((c) => (c === 'High walking' ? 'Moderate walking' : c)),
+        theme: `${day.theme} — take your time`,
+      };
+    }
+    // For history/culture: highlight museum and heritage days
+    if (isHistory && day.day === 4) {
+      return {
+        ...day,
+        chips: ['Museum day', 'Heritage', 'Moderate walking'],
+      };
+    }
+    return day;
+  });
+}
+
+/* ── Budget-style cost tweaks ── */
+
+function applyBudgetStyle(
+  days: ItineraryDay[],
+  budgetStyle: BudgetStyle
+): ItineraryDay[] {
+  return days.map((day) => {
+    if (budgetStyle === 'smart_budget') {
+      // Lower cost level where possible, highlight budget chips
+      return {
+        ...day,
+        estimatedCostLevel:
+          day.estimatedCostLevel === 'high' ? 'medium' : day.estimatedCostLevel,
+        chips: day.chips
+          ? day.chips.map((c) =>
+              c === 'Budget-friendly' ? 'Budget-friendly ✓' : c
+            )
+          : day.chips,
+      };
+    }
+    if (budgetStyle === 'premium_comfort') {
+      // Mark Day 6 special dinner as premium
+      if (day.day === 6) {
+        return {
+          ...day,
+          chips: day.chips ? [...day.chips, 'Premium pace'] : day.chips,
+        };
+      }
+    }
+    return day;
+  });
+}
+
 export function generateItinerary(
   durationDays: number,
-  _budgetStyle: BudgetStyle,
-  _travelStyle: TravelStyle
+  budgetStyle: BudgetStyle,
+  travelStyle: TravelStyle,
+  stayArea: StayAreaId | null = null
 ): ItineraryDay[] {
-  const base = [...ITINERARY_3_DAY];
+  let base = [...ITINERARY_3_DAY];
 
-  if (durationDays <= 3) return base;
+  let days: ItineraryDay[];
 
-  if (durationDays <= 5) return [...base, ...EXTRA_DAYS_4_5.slice(0, durationDays - 3)];
-
-  if (durationDays <= 7) {
-    return [
+  if (durationDays <= 3) {
+    days = base;
+  } else if (durationDays <= 5) {
+    days = [...base, ...EXTRA_DAYS_4_5.slice(0, durationDays - 3)];
+  } else if (durationDays <= 7) {
+    days = [
       ...base,
       ...EXTRA_DAYS_4_5,
       ...EXTRA_DAYS_6_7.slice(0, durationDays - 5),
     ];
+  } else {
+    days = [
+      ...base,
+      ...EXTRA_DAYS_4_5,
+      ...EXTRA_DAYS_6_7,
+      ...EXTRA_DAYS_8_10.slice(0, durationDays - 7),
+    ];
   }
 
-  return [
-    ...base,
-    ...EXTRA_DAYS_4_5,
-    ...EXTRA_DAYS_6_7,
-    ...EXTRA_DAYS_8_10.slice(0, durationDays - 7),
-  ];
+  // Apply contextual personalisation — no AI, curated rules only
+  days = applyStayAreaContext(days, stayArea);
+  days = applyTravelStyle(days, travelStyle);
+  days = applyBudgetStyle(days, budgetStyle);
+
+  return days;
 }

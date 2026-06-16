@@ -10,7 +10,9 @@ import {
   Linking,
   Animated,
   Easing,
+  Alert,
 } from 'react-native';
+import { Check } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, Ellipse, Polygon, Rect, Line } from 'react-native-svg';
 import { router } from 'expo-router';
@@ -29,6 +31,14 @@ import { Shadows } from '../../src/theme/shadows';
 import type { ReadinessStatus } from '../../src/types';
 
 const ITEM_ID = 'accommodation';
+
+const STAY_AREA_DISPLAY_NAMES: Record<string, string> = {
+  zamalek: 'Zamalek',
+  downtown: 'Downtown Cairo',
+  garden_city: 'Garden City',
+  giza: 'Giza',
+  new_cairo: 'New Cairo',
+};
 
 const TRUST_META = {
   sourceType: 'sample_data' as const,
@@ -500,9 +510,11 @@ const mapStyles = StyleSheet.create({
 /* ── Main screen ── */
 
 export default function AccommodationScreen() {
-  const { trip, updateReadinessItem } = useTripStore();
+  const { trip, updateReadinessItem, setStayArea } = useTripStore();
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  const [toastEmoji, setToastEmoji] = useState('✅');
+  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(trip?.stayArea ?? null);
 
   const budgetStyle = trip?.budgetStyle ?? 'balanced_experience';
   const travelStyle = trip?.travelStyle ?? 'first_time_must_sees';
@@ -515,17 +527,70 @@ export default function AccommodationScreen() {
   const rec = getRecommendation(budgetStyle, travelStyle);
   const details = checklistItem?.details;
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, emoji = '✅') => {
     setToastMsg(msg);
+    setToastEmoji(emoji);
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 2500);
   };
 
-  const handleToggleReady = () => {
+  const handleAreaSelect = (areaId: string) => {
+    Haptics.selectionAsync();
+    const newId = selectedAreaId === areaId ? null : areaId;
+    setSelectedAreaId(newId);
+    // Defer the Zustand write to the next JS frame so the current press
+    // gesture can fully complete (responder release) before this Pressable
+    // is re-rendered by the store update. Calling setStayArea synchronously
+    // inside onPress triggers an immediate re-render that tears down the
+    // active Pressable mid-gesture, which leaves the ScrollView holding a
+    // phantom touch lock and silences all subsequent interactions.
+    setTimeout(() => {
+      setStayArea(newId as import('../../src/types').StayAreaId | null);
+    }, 0);
+    // In-app toast feedback — no blocking, no readiness change.
+    if (newId !== null) {
+      const displayName = STAY_AREA_DISPLAY_NAMES[newId] ?? newId;
+      showToast(`Using ${displayName} as your planning base.`, '📍');
+    } else {
+      showToast('Stay area removed. Plan uses a general Cairo base.', '↩️');
+    }
+  };
+
+  const handleBack = () => {
+    router.back();
+  };
+
+  const markReady = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const newStatus: ReadinessStatus = isReady ? 'needs_review' : 'ready';
     updateReadinessItem(ITEM_ID, newStatus);
     showToast(isReady ? 'Status updated' : 'Accommodation marked as ready ✅');
+  };
+
+  const handleToggleReady = () => {
+    // Undo path: always allowed without any alert.
+    if (isReady) {
+      markReady();
+      return;
+    }
+    // Forward path without a stay area: show helpful (non-blocking) alert.
+    if (!selectedAreaId) {
+      Alert.alert(
+        'Choose a stay area?',
+        'Your itinerary works better if ArrivePack knows your Cairo base. You can also continue without choosing.',
+        [
+          { text: 'Choose area', style: 'cancel' },
+          {
+            text: 'Continue without choosing',
+            style: 'default',
+            onPress: markReady,
+          },
+        ]
+      );
+      return;
+    }
+    // Forward path with a stay area already selected (auto-saved on tap).
+    markReady();
   };
 
   const STAY_AREAS_DISPLAY = [
@@ -592,7 +657,7 @@ export default function AccommodationScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
 
         {/* Back */}
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={handleBack} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
 
@@ -734,16 +799,26 @@ export default function AccommodationScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Stay areas in detail</Text>
           <Text style={styles.sectionSub}>
-            Planning recommendations only — not live pricing. Search your preferred booking platform after choosing your area.
+            Tap a card to choose your stay area. Planning recommendations only — not live pricing.
           </Text>
 
           <View style={styles.areaList}>
             {STAY_AREAS_DISPLAY.map((area) => {
               const meta = AREA_META[area.id];
               const isPrimary = area.id === rec.primaryAreaId;
+              const isSelected = area.id === selectedAreaId;
               const badgeColors = BADGE_COLORS[meta?.badgeStyle ?? 'teal'];
               return (
-                <View key={area.id} style={[styles.areaCard, isPrimary && styles.areaCardPrimary]}>
+                <Pressable
+                  key={area.id}
+                  onPress={() => handleAreaSelect(area.id)}
+                  style={({ pressed }) => [
+                    styles.areaCard,
+                    isPrimary && styles.areaCardPrimary,
+                    isSelected && styles.areaCardSelected,
+                    pressed && styles.areaCardPressed,
+                  ]}
+                >
                   {/* Header */}
                   <View style={styles.areaHeader}>
                     <Text style={styles.areaEmoji}>{area.emoji}</Text>
@@ -751,10 +826,19 @@ export default function AccommodationScreen() {
                       <Text style={styles.areaName}>{area.name}</Text>
                       <Text style={styles.areaSubtitle}>{meta?.subtitle}</Text>
                     </View>
-                    <View style={[styles.areaBadge, { backgroundColor: badgeColors.bg }]}>
-                      <Text style={[styles.areaBadgeText, { color: badgeColors.text }]}>
-                        {meta?.badge}
-                      </Text>
+                    <View style={styles.areaHeaderRight}>
+                      {isSelected ? (
+                        <View style={styles.selectedBadge}>
+                          <Check size={11} color="#0D9488" strokeWidth={3} />
+                          <Text style={styles.selectedBadgeText}>Selected</Text>
+                        </View>
+                      ) : (
+                        <View style={[styles.areaBadge, { backgroundColor: badgeColors.bg }]}>
+                          <Text style={[styles.areaBadgeText, { color: badgeColors.text }]}>
+                            {meta?.badge}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
 
@@ -795,20 +879,24 @@ export default function AccommodationScreen() {
                     </View>
                   </View>
 
-                  {/* Search button */}
+                  {/* Search button — do NOT call e.stopPropagation here.
+                      React Native's nested Pressable system already ensures
+                      the inner Pressable wins; calling stopPropagation on a
+                      GestureResponderEvent post-gesture corrupts the responder
+                      chain and leaves the ScrollView holding a phantom lock. */}
                   <Pressable
-                    style={[styles.searchBtn, isPrimary && styles.searchBtnPrimary]}
+                    style={[styles.searchBtn, isPrimary && styles.searchBtnPrimary, isSelected && styles.searchBtnSelected]}
                     onPress={() => {
                       Haptics.selectionAsync();
                       const q = encodeURIComponent(meta?.searchQuery ?? area.name + ' hotels');
                       Linking.openURL(`https://www.google.com/travel/hotels?q=${q}`);
                     }}
                   >
-                    <Text style={[styles.searchBtnText, isPrimary && styles.searchBtnTextPrimary]}>
+                    <Text style={[styles.searchBtnText, isPrimary && styles.searchBtnTextPrimary, isSelected && styles.searchBtnTextSelected]}>
                       🔍 {meta?.searchLabel ?? `Search hotels in ${area.name}`}
                     </Text>
                   </Pressable>
-                </View>
+                </Pressable>
               );
             })}
           </View>
@@ -896,7 +984,7 @@ export default function AccommodationScreen() {
 
       </ScrollView>
 
-      <AppToast message={toastMsg} visible={toastVisible} emoji={isReady ? '↩️' : '✅'} />
+      <AppToast message={toastMsg} visible={toastVisible} emoji={toastEmoji} />
     </SafeAreaView>
   );
 }
@@ -1080,9 +1168,31 @@ const styles = StyleSheet.create({
     borderColor: Colors.teal,
     borderWidth: 1.5,
   },
+  areaCardSelected: {
+    borderColor: '#0D9488',
+    borderWidth: 2,
+    backgroundColor: '#F0FDFA',
+  },
+  areaCardPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.992 }],
+  },
   areaHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
   areaEmoji: { fontSize: 26, marginTop: 2 },
   areaHeaderText: { flex: 1 },
+  areaHeaderRight: { flexShrink: 0 },
+  selectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#CCFBF1',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#99F6E4',
+  },
+  selectedBadgeText: { fontSize: 11, fontWeight: '700', color: '#0D9488' },
   areaName: { fontSize: 16, fontWeight: '700', color: Colors.text },
   areaSubtitle: { ...Typography.caption, color: Colors.muted, marginTop: 2 },
   areaBadge: {
@@ -1122,8 +1232,12 @@ const styles = StyleSheet.create({
   searchBtnPrimary: {
     backgroundColor: Colors.teal,
   },
+  searchBtnSelected: {
+    backgroundColor: '#99F6E4',
+  },
   searchBtnText: { ...Typography.captionBold, color: Colors.tealDark },
   searchBtnTextPrimary: { color: '#FFFFFF' },
+  searchBtnTextSelected: { color: '#0D9488' },
 
   /* Stay types */
   stayTypeList: { gap: Spacing.sm },

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Trip, Place, ReadinessItem, Activity, ItineraryDay } from '../types';
+import type { Trip, Place, ReadinessItem, Activity, ItineraryDay, StayAreaId } from '../types';
 import { generateId } from '../utils/ids';
 import { buildReadinessState, updateItemStatus } from '../services/readinessEngine';
 import { getItinerary } from '../services/itineraryEngine';
@@ -31,6 +31,15 @@ interface TripStore {
   swapActivityIntoDay: (dayIndex: number, activity: Activity) => void;
   markActivityVisited: (dayIndex: number, timeSlot: 'morning' | 'afternoon' | 'evening', activityId: string) => void;
 
+  setStayArea: (areaId: StayAreaId | null) => void;
+  /**
+   * Persist an AI-adjusted itinerary together with the trip context it was
+   * built for. Both the list page and day-detail page read the same store field
+   * via getActiveItinerary() which validates the context before using it.
+   */
+  setAdjustedItinerary: (days: ItineraryDay[], summary?: string, changesMade?: string[]) => void;
+  /** Clear the AI adjustment and return both pages to the rule-based engine. */
+  clearAdjustedItinerary: () => void;
   setHasOnboarded: (value: boolean) => void;
   resetTrip: () => void;
 }
@@ -151,6 +160,62 @@ export const useTripStore = create<TripStore>()(
           };
         });
         set({ trip: { ...trip, itinerary } });
+      },
+
+      setStayArea: (areaId) => {
+        const { trip } = get();
+        if (!trip) return;
+        // Any stay area change invalidates the current AI plan because the plan
+        // was built for a different Cairo base context.
+        set({
+          trip: {
+            ...trip,
+            stayArea: areaId,
+            adjustedItinerary: null,
+            itinerarySource: 'default',
+            itinerarySummary: '',
+            itineraryChangesMade: [],
+            adjustedItineraryContext: null,
+          },
+        });
+      },
+
+      setAdjustedItinerary: (days, summary, changesMade) => {
+        const { trip } = get();
+        if (!trip) return;
+        // Snapshot the trip context so getActiveItinerary can detect staleness later.
+        const ctx = {
+          destinationId: trip.destinationId,
+          durationDays: trip.durationDays,
+          budgetStyle: trip.budgetStyle,
+          travelStyle: trip.travelStyle,
+          stayArea: trip.stayArea,
+        };
+        set({
+          trip: {
+            ...trip,
+            adjustedItinerary: days,
+            itinerarySource: 'ai_adjusted',
+            itinerarySummary: summary ?? '',
+            itineraryChangesMade: changesMade ?? [],
+            adjustedItineraryContext: ctx,
+          },
+        });
+      },
+
+      clearAdjustedItinerary: () => {
+        const { trip } = get();
+        if (!trip) return;
+        set({
+          trip: {
+            ...trip,
+            adjustedItinerary: null,
+            itinerarySource: 'default',
+            itinerarySummary: '',
+            itineraryChangesMade: [],
+            adjustedItineraryContext: null,
+          },
+        });
       },
 
       setHasOnboarded: (value) => set({ hasOnboarded: value }),

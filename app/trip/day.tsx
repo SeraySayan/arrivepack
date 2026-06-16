@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTripStore } from '../../src/store/tripStore';
+import { getActiveItinerary } from '../../src/services/itineraryEngine';
 import ActivityCard from '../../src/components/trip/ActivityCard';
 import { Colors } from '../../src/theme/colors';
 import { Typography } from '../../src/theme/typography';
@@ -26,7 +27,18 @@ export default function DayDetailScreen() {
   const { trip } = useTripStore();
 
   const idx = parseInt(dayIndex ?? '0', 10);
-  const day = trip?.itinerary[idx];
+
+  /**
+   * Use the same shared selector as the list page:
+   *  - If trip.adjustedItinerary exists  → returns AI-adjusted days
+   *  - Otherwise                          → returns rule-based engine days
+   *
+   * This guarantees the card tapped in the list always matches the day shown here.
+   */
+  const itinerary = useMemo(() => getActiveItinerary(trip), [trip]);
+
+  // Primary day from the active source
+  const day = itinerary[idx];
 
   if (!day) {
     return (
@@ -39,6 +51,8 @@ export default function DayDetailScreen() {
     );
   }
 
+  const isAiDay = Boolean(trip?.adjustedItinerary?.length);
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
@@ -49,21 +63,32 @@ export default function DayDetailScreen() {
 
         {/* Day header */}
         <View style={styles.dayHeader}>
-          <View style={styles.dayBadge}>
-            <Text style={styles.dayBadgeText}>Day {day.day}</Text>
+          <View style={styles.dayBadgeRow}>
+            <View style={styles.dayBadge}>
+              <Text style={styles.dayBadgeText}>Day {day.day}</Text>
+            </View>
+            {isAiDay && (
+              <View style={styles.aiBadge}>
+                <Text style={styles.aiBadgeText}>AI adjusted</Text>
+              </View>
+            )}
           </View>
           <Text style={styles.title}>{day.title}</Text>
-          <Text style={styles.theme}>{day.theme}</Text>
-          <Text style={styles.summary}>{day.summary}</Text>
+          {Boolean(day.theme) && <Text style={styles.theme}>{day.theme}</Text>}
+          {Boolean(day.summary) && day.summary !== day.theme && (
+            <Text style={styles.summary}>{day.summary}</Text>
+          )}
         </View>
 
-        {/* Meta */}
-        <View style={styles.meta}>
-          <View style={styles.metaItem}>
-            <Text style={styles.metaIcon}>🚗</Text>
-            <Text style={styles.metaText}>{day.transportSuggestion}</Text>
+        {/* Transport / meta — only shown when there is content */}
+        {Boolean(day.transportSuggestion) && (
+          <View style={styles.meta}>
+            <View style={styles.metaItem}>
+              <Text style={styles.metaIcon}>🚗</Text>
+              <Text style={styles.metaText}>{day.transportSuggestion}</Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Time slots */}
         {TIME_SLOTS.map((slot) => {
@@ -111,6 +136,7 @@ const styles = StyleSheet.create({
   back: { paddingVertical: Spacing.xs },
   backText: { ...Typography.body, color: Colors.teal, fontWeight: '600' },
   dayHeader: { gap: Spacing.xs },
+  dayBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   dayBadge: {
     backgroundColor: Colors.deepNavy,
     paddingHorizontal: Spacing.md,
@@ -119,6 +145,15 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   dayBadgeText: { ...Typography.captionBold, color: Colors.teal },
+  aiBadge: {
+    backgroundColor: '#CCFBF1',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    borderColor: '#99F6E4',
+  },
+  aiBadgeText: { fontSize: 10, fontWeight: '600', color: '#0D9488' },
   title: { ...Typography.h1, color: Colors.text },
   theme: { ...Typography.body, color: Colors.teal, fontWeight: '500' },
   summary: { ...Typography.body, color: Colors.muted },

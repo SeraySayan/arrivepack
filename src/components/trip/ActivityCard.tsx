@@ -14,8 +14,16 @@ interface Props {
 }
 
 const COST_EMOJIS = { low: '💚', medium: '🟡', high: '🔴' };
+const COST_LABELS = { low: 'Budget-friendly', medium: 'Moderate', high: 'Higher cost' };
 
 export default function ActivityCard({ activity, timeLabel, onPress }: Props) {
+  const isAiActivity = activity.trust.lastCheckedLabel === 'AI adjusted';
+
+  const hasDescription = Boolean(activity.description?.trim());
+  const hasDuration = Boolean(activity.estimatedDuration?.trim());
+  const hasTransport = Boolean(activity.transportNote?.trim());
+  const hasWhyItFits = Boolean(activity.whyItFits?.trim());
+
   return (
     <AppCard onPress={onPress} style={styles.card}>
       <View style={styles.header}>
@@ -30,33 +38,56 @@ export default function ActivityCard({ activity, timeLabel, onPress }: Props) {
       </View>
 
       <Text style={styles.title}>{activity.title}</Text>
-      <Text style={styles.description}>{activity.description}</Text>
 
-      <View style={styles.meta}>
-        <View style={styles.metaItem}>
-          <Text style={styles.metaIcon}>⏱</Text>
-          <Text style={styles.metaText}>{activity.estimatedDuration}</Text>
+      {hasDescription && (
+        <Text style={styles.description}>{activity.description}</Text>
+      )}
+
+      {/* Meta rows — only rendered when non-empty */}
+      {(hasDuration || hasTransport) && (
+        <View style={styles.meta}>
+          {hasDuration && (
+            <View style={styles.metaItem}>
+              <Text style={styles.metaIcon}>⏱</Text>
+              <Text style={styles.metaText}>{activity.estimatedDuration}</Text>
+            </View>
+          )}
+          <View style={styles.metaItem}>
+            <Text style={styles.metaIcon}>{COST_EMOJIS[activity.estimatedCostLevel]}</Text>
+            <Text style={styles.metaText}>{COST_LABELS[activity.estimatedCostLevel]}</Text>
+          </View>
+          {hasTransport && (
+            <View style={styles.metaItem}>
+              <Text style={styles.metaIcon}>🚗</Text>
+              <Text style={styles.metaText} numberOfLines={2}>{activity.transportNote}</Text>
+            </View>
+          )}
         </View>
-        <View style={styles.metaItem}>
+      )}
+
+      {/* Cost-only row when there is no duration or transport to show */}
+      {!hasDuration && !hasTransport && (
+        <View style={styles.metaSingle}>
           <Text style={styles.metaIcon}>{COST_EMOJIS[activity.estimatedCostLevel]}</Text>
-          <Text style={styles.metaText}>
-            {activity.estimatedCostLevel === 'low' ? 'Budget-friendly' : activity.estimatedCostLevel === 'medium' ? 'Moderate' : 'Higher cost'}
-          </Text>
+          <Text style={styles.metaText}>{COST_LABELS[activity.estimatedCostLevel]}</Text>
         </View>
-        <View style={styles.metaItem}>
-          <Text style={styles.metaIcon}>🚗</Text>
-          <Text style={styles.metaText} numberOfLines={1}>{activity.transportNote}</Text>
-        </View>
-      </View>
+      )}
 
-      {activity.whyItFits && (
+      {hasWhyItFits && (
         <View style={styles.whyBlock}>
           <Text style={styles.whyText}>✦ {activity.whyItFits}</Text>
         </View>
       )}
 
       <View style={styles.trust}>
-        <TrustBadge trust={activity.trust} compact />
+        {isAiActivity ? (
+          <View style={styles.aiTrustRow}>
+            <View style={styles.aiTrustDot} />
+            <Text style={styles.aiTrustText}>AI adjusted</Text>
+          </View>
+        ) : (
+          <TrustBadge trust={activity.trust} compact />
+        )}
       </View>
     </AppCard>
   );
@@ -100,24 +131,33 @@ const styles = StyleSheet.create({
   description: {
     ...Typography.body,
     color: Colors.textSecondary,
+    lineHeight: 20,
   },
   meta: {
     gap: 4,
     marginTop: Spacing.xs,
   },
-  metaItem: {
+  metaSingle: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    marginTop: Spacing.xs,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: 6,
   },
   metaIcon: {
     fontSize: 13,
     width: 20,
+    marginTop: 1,
   },
   metaText: {
     ...Typography.caption,
     color: Colors.muted,
     flex: 1,
+    lineHeight: 18,
   },
   whyBlock: {
     backgroundColor: Colors.mint,
@@ -132,5 +172,21 @@ const styles = StyleSheet.create({
   },
   trust: {
     marginTop: Spacing.xs,
+  },
+  aiTrustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  aiTrustDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.teal,
+  },
+  aiTrustText: {
+    ...Typography.caption,
+    color: Colors.teal,
+    fontWeight: '600',
   },
 });
