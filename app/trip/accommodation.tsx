@@ -123,38 +123,34 @@ const STAY_TYPES = [
     id: 'hotel',
     icon: '🏨',
     title: 'Hotel',
-    bestFor: 'Most first-time travellers',
-    description: 'Easiest option for most first-time visitors. Reception support, breakfast options, airport transfer help, and luggage storage make arrivals and departures smoother.',
-    estimatedCost: '$30–200+ USD per night depending on category',
+    bestFor: 'Easiest for most first-timers',
+    estimatedCost: '$30–200+/night',
   },
   {
     id: 'apartment',
     icon: '🏠',
     title: 'Apartment / Airbnb',
     bestFor: 'Families, groups, longer stays',
-    description: 'More space, kitchen access, and a more local feel. For Egypt, check the host response rate, building access instructions, check-in process, and recent reviews carefully.',
-    estimatedCost: '$40–150 USD per night depending on area and size',
+    estimatedCost: '$40–150/night',
   },
   {
     id: 'hostel',
     icon: '🛏️',
     title: 'Hostel',
-    bestFor: 'Budget and solo travellers',
-    description: 'Cheapest option with a social atmosphere. Check location, locker availability, noise level, and recent reviews before booking.',
-    estimatedCost: '$10–25 USD per night',
+    bestFor: 'Budget & solo travellers',
+    estimatedCost: '$10–25/night',
   },
 ];
 
 /* ── Before you book checklist (curated) ── */
 
 const BEFORE_BOOK = [
-  'Book accommodation before departure — especially for the Oct–Apr busy season.',
-  'Check recent reviews, not just the overall rating.',
-  'Confirm the cancellation policy before booking.',
-  'Ask about airport transfer or pickup if needed.',
-  'Check if breakfast is included — it can simplify early mornings.',
-  'Save the accommodation address offline before arrival.',
-  'For apartments/Airbnb, check the host response rate and recent reviews carefully.',
+  'Book early for Oct–Apr season',
+  'Read recent reviews, not just rating',
+  'Confirm the cancellation policy',
+  'Ask about airport pickup',
+  'Check if breakfast is included',
+  'Save the address offline',
 ];
 
 /* ── Recommendation logic ── */
@@ -167,7 +163,7 @@ function getRecommendation(budgetStyle: string, travelStyle: string): {
   if (budgetStyle === 'premium_comfort') {
     return {
       primaryAreaId: 'zamalek',
-      headlineCopy: 'For a premium comfort trip, Zamalek is a strong starting base. It is a comfortable central Cairo area on a Nile island with good restaurants, cafes, hotels, and easy city movement.',
+      headlineCopy: 'Upscale Nile-island base with great dining, hotels, and easy city movement.',
       alternatives: [
         { areaId: 'garden_city', reason: 'Quieter and equally upscale — closer to the Nile.' },
         { areaId: 'giza',        reason: 'If pyramid views or early pyramid access matter most.' },
@@ -180,8 +176,8 @@ function getRecommendation(budgetStyle: string, travelStyle: string): {
     return {
       primaryAreaId: isFirstTime ? 'zamalek' : 'downtown',
       headlineCopy: isFirstTime
-        ? 'For a first-time trip with a balanced budget, Zamalek gives you a comfortable, well-connected base without the chaos of the city centre.'
-        : 'For a balanced budget and local-oriented trip, Downtown Cairo gives you central access, metro links, and proximity to key museums.',
+        ? 'A comfortable, well-connected base — without the chaos of the city centre.'
+        : 'Central access, metro links, and the Egyptian Museum close by.',
       alternatives: [
         { areaId: 'downtown',    reason: 'Central and budget-friendly — good metro access.' },
         { areaId: 'garden_city', reason: 'Quieter upscale option in central Cairo.' },
@@ -192,7 +188,7 @@ function getRecommendation(budgetStyle: string, travelStyle: string): {
   } else {
     return {
       primaryAreaId: 'downtown',
-      headlineCopy: 'For a smart budget trip, Downtown Cairo gives you the most central access at the lowest price — close to the Egyptian Museum and metro connections.',
+      headlineCopy: 'The most central access at the lowest price — near the museum and metro.',
       alternatives: [
         { areaId: 'giza',      reason: 'Cheaper option with direct access to the pyramids.' },
         { areaId: 'zamalek',   reason: 'More comfortable, slightly higher cost.' },
@@ -507,6 +503,18 @@ const mapStyles = StyleSheet.create({
   },
 });
 
+/* ── Small presentational components ── */
+
+function SectionTitle({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <View style={styles.sectionTitleRow}>
+      <View style={styles.sectionAccent} />
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
+    </View>
+  );
+}
+
 /* ── Main screen ── */
 
 export default function AccommodationScreen() {
@@ -654,6 +662,18 @@ export default function AccommodationScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
+
+      {/* Cinematic ambient background */}
+      <LinearGradient
+        colors={['#EAF3F2', '#F1F5F8', '#F4F6FA']}
+        locations={[0, 0.4, 1]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 0.9 }}
+        style={styles.ambientBg}
+        pointerEvents="none"
+      />
+      <View style={styles.ambientBlob} pointerEvents="none" />
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
 
         {/* Back */}
@@ -663,16 +683,17 @@ export default function AccommodationScreen() {
 
         {/* ── 1. Hero card ── */}
         <LinearGradient
-          colors={['#0F172A', '#0F2E2B']}
+          colors={['#0B1220', '#0F2E2B', '#0C3742']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.heroCard}
         >
           <View style={styles.heroGlow} />
-          <Text style={styles.heroIcon}>🏨</Text>
+          <View style={styles.heroGlowWarm} />
+          <Text style={styles.heroEyebrow}>WHERE TO STAY</Text>
           <Text style={styles.heroTitle}>Accommodation</Text>
           <Text style={styles.heroSubtitle}>
-            Choose the right area and stay type before you book.
+            Choose your Cairo base — we'll tune your itinerary around it.
           </Text>
           <View style={styles.heroBadges}>
             <StatusPill status={status} />
@@ -680,49 +701,34 @@ export default function AccommodationScreen() {
           </View>
         </LinearGradient>
 
-        {/* ── 2. Context cards ── */}
-        <View style={styles.contextRow}>
-          <View style={[styles.contextCard, styles.contextCardBlue]}>
-            <Text style={styles.contextIcon}>🗺️</Text>
-            <Text style={styles.contextTitle}>Why Cairo matters</Text>
-            <Text style={styles.contextBody}>
-              Most first-time Egypt trips are centred around Cairo. It is the main arrival base and is closely connected to the Egyptian Museum, the Giza Pyramids, restaurants, transport, and day-trip planning.
-            </Text>
+        {/* ── 2. Best starting point intro ── */}
+        <View style={styles.startCard}>
+          <View style={styles.startGlow} pointerEvents="none" />
+          <View style={styles.startHeader}>
+            <View style={styles.startIconBubble}>
+              <Text style={styles.startIconText}>🧭</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.startTitle}>Start with your Cairo base</Text>
+              <Text style={styles.startSub}>Optional — but it makes your plan smarter.</Text>
+            </View>
           </View>
-          <View style={[styles.contextCard, styles.contextCardGreen]}>
-            <Text style={styles.contextIcon}>📍</Text>
-            <Text style={styles.contextTitle}>These are stay areas, not hotels</Text>
-            <Text style={styles.contextBody}>
-              The options below are areas in and around Cairo. Choose the area that fits your trip style first, then search for hotels or apartments there on your preferred booking platform.
-            </Text>
-          </View>
-        </View>
-
-        {/* ── 3. How this works (flow) ── */}
-        <View style={styles.flowCard}>
-          <Text style={styles.flowTitle}>How to use this page</Text>
-          <View style={styles.flowSteps}>
-            {[
-              { step: '1', label: 'Pick your area', sub: 'Choose a Cairo neighbourhood that fits your style' },
-              { step: '2', label: 'Choose stay type', sub: 'Hotel, apartment, or hostel' },
-              { step: '3', label: 'Search externally', sub: 'Booking.com, Airbnb, Google Hotels, etc.' },
-            ].map((s) => (
-              <View key={s.step} style={styles.flowStep}>
-                <View style={styles.flowStepNum}>
-                  <Text style={styles.flowStepNumText}>{s.step}</Text>
-                </View>
-                <View style={styles.flowStepBody}>
-                  <Text style={styles.flowStepLabel}>{s.label}</Text>
-                  <Text style={styles.flowStepSub}>{s.sub}</Text>
-                </View>
-              </View>
-            ))}
+          <View style={styles.startChips}>
+            <View style={styles.startChip}>
+              <Text style={styles.startChipText}>🗺️ Tunes your itinerary</Text>
+            </View>
+            <View style={styles.startChip}>
+              <Text style={styles.startChipText}>📍 Areas, not hotels</Text>
+            </View>
+            <View style={styles.startChip}>
+              <Text style={styles.startChipText}>✨ Skip anytime</Text>
+            </View>
           </View>
         </View>
 
         {/* ── 4. Top recommendation ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Best starting point for your trip</Text>
+          <SectionTitle title="Best for your trip" />        
           <LinearGradient
             colors={['#0F2E2B', '#0D3340']}
             start={{ x: 0, y: 0 }}
@@ -769,7 +775,7 @@ export default function AccommodationScreen() {
 
         {/* ── 5. Quick decision guide ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick decision guide</Text>
+          <SectionTitle title="Quick decision guide" />
           <View style={styles.decisionCard}>
             {DECISION_GUIDE.map((row, i) => (
               <View key={i} style={[styles.decisionRow, i < DECISION_GUIDE.length - 1 && styles.decisionRowBorder]}>
@@ -785,9 +791,9 @@ export default function AccommodationScreen() {
 
         {/* ── 6. Cairo stay area map ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cairo stay area map</Text>
+          <SectionTitle title="Stay area map" />
           <Text style={styles.sectionSub}>
-            See how the stay areas relate to each other. Zamalek, Downtown, and Garden City are in central Cairo. Giza is the pyramids side. New Cairo is the modern district to the east.
+            Central Cairo: Zamalek, Downtown & Garden City. Giza is the pyramids side; New Cairo is the modern east.
           </Text>
           <CairoAreaMap highlightId={rec.primaryAreaId} />
           <Text style={styles.mapNote}>
@@ -797,9 +803,9 @@ export default function AccommodationScreen() {
 
         {/* ── 7. Stay areas ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Stay areas in detail</Text>
+          <SectionTitle title="Stay areas" hint="Tap to choose" />
           <Text style={styles.sectionSub}>
-            Tap a card to choose your stay area. Planning recommendations only — not live pricing.
+            Pick the area that fits your style — planning guidance, not live pricing.
           </Text>
 
           <View style={styles.areaList}>
@@ -821,7 +827,9 @@ export default function AccommodationScreen() {
                 >
                   {/* Header */}
                   <View style={styles.areaHeader}>
-                    <Text style={styles.areaEmoji}>{area.emoji}</Text>
+                    <View style={[styles.areaEmojiBubble, isSelected && styles.areaEmojiBubbleSelected]}>
+                      <Text style={styles.areaEmoji}>{area.emoji}</Text>
+                    </View>
                     <View style={styles.areaHeaderText}>
                       <Text style={styles.areaName}>{area.name}</Text>
                       <Text style={styles.areaSubtitle}>{meta?.subtitle}</Text>
@@ -842,8 +850,15 @@ export default function AccommodationScreen() {
                     </View>
                   </View>
 
-                  {/* Description */}
-                  <Text style={styles.areaDescription}>{meta?.description}</Text>
+                  {/* Meta pills */}
+                  <View style={styles.areaMetaRow}>
+                    <View style={styles.areaMetaPill}>
+                      <Text style={styles.areaMetaPillText}>🛡 {area.safetyLevel} safety</Text>
+                    </View>
+                    <View style={styles.areaMetaPill}>
+                      <Text style={styles.areaMetaPillText}>✨ {area.comfortLevel} comfort</Text>
+                    </View>
+                  </View>
 
                   {/* Distance */}
                   <View style={styles.areaDistanceRow}>
@@ -851,32 +866,18 @@ export default function AccommodationScreen() {
                     <Text style={styles.areaDistance}>{area.distanceNote}</Text>
                   </View>
 
-                  {/* Pros / Cons */}
-                  <View style={styles.prosConsRow}>
-                    <View style={styles.halfCol}>
-                      <Text style={styles.prosConsTitle}>✅ Pros</Text>
-                      {area.pros.map((p) => (
-                        <Text key={p} style={styles.prosText}>• {p}</Text>
-                      ))}
-                    </View>
-                    <View style={styles.halfCol}>
-                      <Text style={styles.prosConsTitle}>⚠️ Cons</Text>
-                      {area.cons.map((c) => (
-                        <Text key={c} style={styles.consText}>• {c}</Text>
-                      ))}
-                    </View>
-                  </View>
-
-                  {/* Safety / Comfort meta */}
-                  <View style={styles.metaRow}>
-                    <View style={styles.metaTag}>
-                      <Text style={styles.metaLabel}>Safety</Text>
-                      <Text style={styles.metaValue}>{area.safetyLevel}</Text>
-                    </View>
-                    <View style={styles.metaTag}>
-                      <Text style={styles.metaLabel}>Comfort</Text>
-                      <Text style={styles.metaValue}>{area.comfortLevel}</Text>
-                    </View>
+                  {/* Key points — pros as chips + one caution */}
+                  <View style={styles.areaChipRow}>
+                    {area.pros.slice(0, 3).map((p) => (
+                      <View key={p} style={styles.proChip}>
+                        <Text style={styles.proChipText}>{p}</Text>
+                      </View>
+                    ))}
+                    {area.cons[0] ? (
+                      <View style={styles.conChip}>
+                        <Text style={styles.conChipText}>⚠ {area.cons[0]}</Text>
+                      </View>
+                    ) : null}
                   </View>
 
                   {/* Search button — do NOT call e.stopPropagation here.
@@ -904,26 +905,20 @@ export default function AccommodationScreen() {
 
         {/* ── 8. Stay type options ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Stay type options</Text>
-          <Text style={styles.sectionSub}>
-            Once you have chosen your area, choose the stay type that fits your group and budget.
-          </Text>
+          <SectionTitle title="Stay type" />
           <View style={styles.stayTypeList}>
             {STAY_TYPES.map((st) => (
               <View key={st.id} style={styles.stayTypeCard}>
-                <View style={styles.stayTypeHeader}>
+                <View style={styles.stayTypeIconBubble}>
                   <Text style={styles.stayTypeIcon}>{st.icon}</Text>
-                  <View style={styles.stayTypeHeaderText}>
+                </View>
+                <View style={styles.stayTypeBody}>
+                  <View style={styles.stayTypeTopRow}>
                     <Text style={styles.stayTypeTitle}>{st.title}</Text>
-                    <Text style={styles.stayTypeBestFor}>Best for: {st.bestFor}</Text>
+                    <Text style={styles.stayTypeCost}>{st.estimatedCost}</Text>
                   </View>
+                  <Text style={styles.stayTypeBestFor}>{st.bestFor}</Text>
                 </View>
-                <Text style={styles.stayTypeDesc}>{st.description}</Text>
-                <View style={styles.costRow}>
-                  <Text style={styles.costLabel}>Sample estimate</Text>
-                  <Text style={styles.costValue}>{st.estimatedCost}</Text>
-                </View>
-                <Text style={styles.costNote}>Not live pricing — confirm current rates on booking platforms.</Text>
               </View>
             ))}
           </View>
@@ -932,10 +927,7 @@ export default function AccommodationScreen() {
         {/* ── 9. Useful booking links ── */}
         {details?.sourceLinks && details.sourceLinks.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Where to search and book</Text>
-            <Text style={styles.sectionSub}>
-              These are external platforms. ArrivePack helps you decide where to stay — you search and book on your preferred platform.
-            </Text>
+            <SectionTitle title="Where to book" />
             <View style={styles.linksList}>
               {details.sourceLinks.map((link) => (
                 <ExternalLinkCard key={link.id} link={link} />
@@ -946,24 +938,32 @@ export default function AccommodationScreen() {
 
         {/* ── 10. Before you book ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Before you book</Text>
-          <View style={styles.checklistCard}>
+          <SectionTitle title="Before you book" />
+          <View style={styles.checkGrid}>
             {BEFORE_BOOK.map((item, i) => (
-              <View key={i} style={[styles.checkRow, i < BEFORE_BOOK.length - 1 && styles.checkRowBorder]}>
-                <View style={styles.checkBox}>
-                  <Text style={styles.checkMark}>○</Text>
+              <View key={i} style={styles.checkTile}>
+                <View style={styles.checkCircle}>
+                  <Text style={styles.checkTick}>✓</Text>
                 </View>
-                <Text style={styles.checkText}>{item}</Text>
+                <Text style={styles.checkTileText}>{item}</Text>
               </View>
             ))}
           </View>
+        </View>
+
+        {/* ── Optional choice note ── */}
+        <View style={styles.optionalNote}>
+          <Text style={styles.optionalNoteIcon}>💡</Text>
+          <Text style={styles.optionalNoteText}>
+            Choosing an area is optional — it just personalises your itinerary. Readiness is completed by marking accommodation planned below.
+          </Text>
         </View>
 
         {/* ── 11. Warning ── */}
         <View style={styles.warningCard}>
           <Text style={styles.warningIcon}>⚠️</Text>
           <Text style={styles.warningText}>
-            Accommodation prices, availability, guest reviews, and policies can change. Always confirm current details directly on the booking platform before booking.
+            Prices, availability, and policies change. Always confirm current details on the booking platform before booking.
           </Text>
         </View>
 
@@ -993,6 +993,16 @@ export default function AccommodationScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F4F6FA' },
+  ambientBg: { ...StyleSheet.absoluteFillObject },
+  ambientBlob: {
+    position: 'absolute',
+    top: -80,
+    right: -70,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(20,184,166,0.09)',
+  },
   content: {
     paddingHorizontal: Spacing.screenH,
     paddingBottom: 110,
@@ -1001,6 +1011,74 @@ const styles = StyleSheet.create({
   },
   backBtn: { paddingVertical: Spacing.xs },
   backText: { ...Typography.body, color: Colors.teal, fontWeight: '600' },
+
+  /* Hero additions */
+  heroEyebrow: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: 'rgba(45,212,191,0.9)',
+    letterSpacing: 1.6,
+    marginBottom: 2,
+  },
+  heroGlowWarm: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#F59E0B',
+    opacity: 0.06,
+    bottom: -50,
+    left: -30,
+  },
+
+  /* Section title row */
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  sectionAccent: { width: 4, height: 16, borderRadius: 2, backgroundColor: Colors.teal },
+  sectionHint: { ...Typography.caption, color: Colors.mutedLight, marginLeft: 'auto', fontWeight: '500' },
+
+  /* Best starting point intro */
+  startCard: {
+    backgroundColor: Colors.cardWhite,
+    borderRadius: Radii.cardLg,
+    borderWidth: 1,
+    borderColor: Colors.teal + '22',
+    padding: Spacing.cardPad,
+    gap: Spacing.sm,
+    overflow: 'hidden',
+    ...Shadows.sm,
+  },
+  startGlow: {
+    position: 'absolute',
+    top: -50,
+    right: -40,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: 'rgba(20,184,166,0.06)',
+  },
+  startHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  startIconBubble: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: Colors.mint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  startIconText: { fontSize: 18 },
+  startTitle: { fontSize: 15.5, fontWeight: '700', color: Colors.text, letterSpacing: -0.2 },
+  startSub: { ...Typography.caption, color: Colors.muted, marginTop: 1 },
+  startChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  startChip: {
+    backgroundColor: Colors.background,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  startChipText: { ...Typography.caption, color: Colors.textSecondary, fontWeight: '600' },
 
   /* Hero */
   heroCard: {
@@ -1177,9 +1255,51 @@ const styles = StyleSheet.create({
     opacity: 0.92,
     transform: [{ scale: 0.992 }],
   },
-  areaHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
-  areaEmoji: { fontSize: 26, marginTop: 2 },
+  areaHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  areaEmojiBubble: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.04)',
+  },
+  areaEmojiBubbleSelected: {
+    backgroundColor: '#CCFBF1',
+    borderColor: '#99F6E4',
+  },
+  areaEmoji: { fontSize: 22 },
   areaHeaderText: { flex: 1 },
+
+  /* Area meta pills + key-point chips */
+  areaMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  areaMetaPill: {
+    backgroundColor: Colors.background,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  areaMetaPillText: { fontSize: 11, fontWeight: '600', color: Colors.textSecondary },
+  areaChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  proChip: {
+    backgroundColor: Colors.successLight,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  proChipText: { fontSize: 11, fontWeight: '600', color: Colors.tealDark },
+  conChip: {
+    backgroundColor: Colors.yellowLight,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  conChipText: { fontSize: 11, fontWeight: '600', color: '#92400E' },
   areaHeaderRight: { flexShrink: 0 },
   selectedBadge: {
     flexDirection: 'row',
@@ -1242,35 +1362,76 @@ const styles = StyleSheet.create({
   /* Stay types */
   stayTypeList: { gap: Spacing.sm },
   stayTypeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
     backgroundColor: Colors.cardWhite,
     borderRadius: Radii.card,
-    padding: Spacing.cardPad,
+    padding: Spacing.base,
     borderWidth: 1,
-    borderColor: Colors.border,
-    gap: Spacing.sm,
+    borderColor: Colors.borderLight,
     ...Shadows.xs,
   },
-  stayTypeHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  stayTypeIcon: { fontSize: 22 },
-  stayTypeHeaderText: { flex: 1 },
-  stayTypeTitle: { fontSize: 15, fontWeight: '700', color: Colors.text },
-  stayTypeBestFor: { ...Typography.caption, color: Colors.teal, fontWeight: '600', marginTop: 2 },
-  stayTypeDesc: { ...Typography.body, color: Colors.textSecondary, lineHeight: 21 },
-  costRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  stayTypeIconBubble: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: Colors.background,
     alignItems: 'center',
-    backgroundColor: Colors.borderLight,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 7,
-    borderRadius: Radii.sm,
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  costLabel: { ...Typography.caption, color: Colors.muted },
-  costValue: { ...Typography.caption, color: Colors.text, fontWeight: '600', flex: 1, textAlign: 'right' },
-  costNote: { ...Typography.caption, color: Colors.mutedLight, fontStyle: 'italic', lineHeight: 16 },
+  stayTypeIcon: { fontSize: 20 },
+  stayTypeBody: { flex: 1, gap: 2 },
+  stayTypeTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm },
+  stayTypeTitle: { fontSize: 15, fontWeight: '700', color: Colors.text },
+  stayTypeCost: { fontSize: 12, fontWeight: '700', color: Colors.tealDark },
+  stayTypeBestFor: { ...Typography.caption, color: Colors.teal, fontWeight: '600' },
 
   /* Booking links */
   linksList: { gap: Spacing.sm },
+
+  /* Before you book — check grid */
+  checkGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  checkTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '47.5%',
+    flexGrow: 1,
+    backgroundColor: Colors.cardWhite,
+    borderRadius: Radii.card,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    ...Shadows.xs,
+  },
+  checkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.mint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  checkTick: { fontSize: 11, color: Colors.tealDark, fontWeight: '800' },
+  checkTileText: { ...Typography.caption, color: Colors.textSecondary, flex: 1, fontWeight: '500', lineHeight: 16 },
+
+  /* Optional choice note */
+  optionalNote: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    backgroundColor: Colors.skyBlueLight,
+    borderRadius: Radii.card,
+    padding: Spacing.base,
+    borderWidth: 1,
+    borderColor: Colors.skyBlue + '25',
+    alignItems: 'flex-start',
+  },
+  optionalNoteIcon: { fontSize: 15, flexShrink: 0 },
+  optionalNoteText: { ...Typography.caption, color: Colors.textSecondary, flex: 1, lineHeight: 18 },
 
   /* Before you book */
   checklistCard: {

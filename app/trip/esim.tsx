@@ -9,9 +9,12 @@ import {
   StatusBar,
   Linking,
   Alert,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ExternalLink } from 'lucide-react-native';
+import { ExternalLink, ChevronDown } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as Haptics from '../../src/utils/haptics';
 import { useTripStore } from '../../src/store/tripStore';
@@ -22,6 +25,16 @@ import { Colors } from '../../src/theme/colors';
 import { Typography } from '../../src/theme/typography';
 import { Radii, Spacing } from '../../src/theme/spacing';
 import { Shadows } from '../../src/theme/shadows';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const animateLayout = () => {
+  if (Platform.OS !== 'web') {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  }
+};
 
 /* ─── Static config ────────────────────────────────────────── */
 
@@ -35,21 +48,21 @@ const USAGE_PROFILES = [
   {
     label: 'Light',
     range: '3–5 GB',
-    desc: 'Messaging, maps, light browsing',
+    desc: 'Messaging & maps',
     emoji: '💬',
     recommended: false,
   },
   {
     label: 'Normal',
     range: '5–10 GB',
-    desc: 'Maps, messaging, social media, video calls',
+    desc: 'Maps, social & calls',
     emoji: '📱',
     recommended: true,
   },
   {
     label: 'Heavy',
     range: '10 GB+',
-    desc: 'Content creation, frequent calls, streaming',
+    desc: 'Streaming & creating',
     emoji: '🎬',
     recommended: false,
   },
@@ -74,12 +87,12 @@ const COMPARISON: ComparisonOption[] = [
     iconEmoji: '📲',
     iconBg: '#EFF6FF',
     title: 'eSIM before travel',
-    badge: 'Easiest option',
+    badge: 'Easiest',
     badgeBg: '#E6FFFA',
     badgeColor: '#0F766E',
     best: 'Landing with internet already working.',
-    pros: ['Buy before you fly', 'Instant activation', 'Keeps your existing number'],
-    watchOuts: ['Your device must support eSIM', 'Check current plans on the provider website'],
+    pros: ['Buy before you fly', 'Instant activation', 'Keeps your number'],
+    watchOuts: ['Needs an eSIM-compatible device', 'Check current plans online'],
   },
   {
     id: 'local_sim',
@@ -90,8 +103,8 @@ const COMPARISON: ComparisonOption[] = [
     badgeBg: '#FFFBEB',
     badgeColor: '#B45309',
     best: 'Cheaper local data after you land.',
-    pros: ['Often cheaper data per GB', 'Available at airport/operator shops', 'Useful for longer trips'],
-    watchOuts: ['Takes extra time at arrival', 'May require passport registration', 'Confirm pricing at the counter'],
+    pros: ['Often cheaper per GB', 'Sold at airport shops', 'Good for longer trips'],
+    watchOuts: ['Takes time at arrival', 'May need passport registration'],
   },
   {
     id: 'wifi',
@@ -101,18 +114,17 @@ const COMPARISON: ComparisonOption[] = [
     badge: 'Backup only',
     badgeBg: '#F1F5F9',
     badgeColor: '#64748B',
-    best: 'Hotels, cafes, and airports as secondary use.',
-    pros: ['Useful backup at hotels and cafes', 'No setup cost'],
-    watchOuts: ['Not reliable as your only connection', 'Not suitable for maps, transport, or emergencies'],
+    best: 'Hotels, cafés & airports as secondary use.',
+    pros: ['Handy at hotels & cafés', 'No setup cost'],
+    watchOuts: ['Not reliable alone', 'Not for maps or emergencies'],
   },
 ];
 
 const COMM_TIPS = [
   'Save your hotel address offline before departure.',
-  'Keep WhatsApp ready — it\'s used by drivers, hosts, and local contacts.',
-  'Download offline maps (Google Maps or Maps.me) before you fly.',
-  'Do not rely only on hotel Wi-Fi.',
-  'Keep emergency contacts saved and accessible without internet.',
+  'Keep WhatsApp ready — drivers, hosts & local contacts use it.',
+  'Download offline maps before you fly.',
+  'Keep emergency contacts saved offline.',
 ];
 
 interface ProviderLink {
@@ -162,23 +174,23 @@ function ProviderLinkCard({ provider }: { provider: ProviderLink }) {
       onPress={handleOpen}
       style={({ pressed }) => [provStyles.card, pressed && provStyles.pressed]}
     >
+      <View style={provStyles.logoBubble}>
+        <Text style={provStyles.logoText}>{provider.name.charAt(0)}</Text>
+      </View>
       <View style={provStyles.left}>
         <Text style={provStyles.name}>{provider.name}</Text>
-        <Text style={provStyles.desc}>{provider.description}</Text>
         <View style={provStyles.badges}>
           <View style={provStyles.badge}>
-            <Text style={provStyles.badgeText}>External provider</Text>
+            <Text style={provStyles.badgeText}>External</Text>
           </View>
           <View style={[provStyles.badge, provStyles.badgeWarn]}>
-            <Text style={[provStyles.badgeText, provStyles.badgeWarnText]}>Confirm pricing before purchase</Text>
+            <Text style={[provStyles.badgeText, provStyles.badgeWarnText]}>Confirm pricing</Text>
           </View>
         </View>
       </View>
-      <View style={provStyles.ctaCol}>
-        <View style={provStyles.ctaBtn}>
-          <ExternalLink size={13} color={Colors.teal} />
-          <Text style={provStyles.ctaBtnText}>{provider.ctaLabel}</Text>
-        </View>
+      <View style={provStyles.ctaBtn}>
+        <ExternalLink size={13} color={Colors.teal} />
+        <Text style={provStyles.ctaBtnText}>Open</Text>
       </View>
     </Pressable>
   );
@@ -189,85 +201,107 @@ const provStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.cardWhite,
-    borderRadius: Radii.card,
+    borderRadius: Radii.cardLg,
     padding: Spacing.cardPad,
     borderWidth: 1.5,
-    borderColor: Colors.teal + '28',
-    gap: Spacing.md,
-    ...Shadows.xs,
+    borderColor: Colors.teal + '2B',
+    gap: Spacing.sm,
+    ...Shadows.sm,
   },
   pressed: { opacity: 0.88, transform: [{ scale: 0.99 }] },
-  left: { flex: 1, gap: 4 },
-  name: { fontSize: 15, fontWeight: '700', color: Colors.text },
-  desc: { ...Typography.caption, color: Colors.muted, lineHeight: 18 },
-  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 2 },
+  logoBubble: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: Colors.mint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  logoText: { fontSize: 19, fontWeight: '800', color: Colors.tealDark },
+  left: { flex: 1, gap: 5 },
+  name: { fontSize: 16, fontWeight: '700', color: Colors.text, letterSpacing: -0.2 },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   badge: {
     backgroundColor: Colors.skyBlueLight,
-    paddingHorizontal: 7,
+    paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 999,
   },
   badgeText: { fontSize: 10, fontWeight: '600', color: Colors.skyBlue },
   badgeWarn: { backgroundColor: Colors.yellowLight },
   badgeWarnText: { color: Colors.warning },
-  ctaCol: { flexShrink: 0 },
   ctaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     backgroundColor: Colors.mint,
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-    borderRadius: Radii.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: Radii.md,
     borderWidth: 1,
     borderColor: Colors.teal + '40',
+    flexShrink: 0,
   },
   ctaBtnText: { fontSize: 12, fontWeight: '700', color: Colors.tealDark },
 });
 
-/* ─── ComparisonCard — full-width stacked ──────────────────── */
+/* ─── ComparisonCard — expandable ──────────────────────────── */
 
-function ComparisonCard({ item }: { item: ComparisonOption }) {
+function ComparisonCard({
+  item,
+  expanded,
+  onToggle,
+}: {
+  item: ComparisonOption;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   return (
     <View style={cmpStyles.card}>
-      {/* Header: icon bubble + title + badge */}
-      <View style={cmpStyles.header}>
+      <Pressable onPress={onToggle} style={cmpStyles.header}>
         <View style={[cmpStyles.iconBubble, { backgroundColor: item.iconBg }]}>
           <Text style={cmpStyles.iconEmoji}>{item.iconEmoji}</Text>
         </View>
         <View style={cmpStyles.headerText}>
-          <Text style={cmpStyles.title}>{item.title}</Text>
-          <View style={[cmpStyles.badge, { backgroundColor: item.badgeBg }]}>
-            <Text style={[cmpStyles.badgeText, { color: item.badgeColor }]}>{item.badge}</Text>
+          <View style={cmpStyles.titleRow}>
+            <Text style={cmpStyles.title}>{item.title}</Text>
+            <View style={[cmpStyles.badge, { backgroundColor: item.badgeBg }]}>
+              <Text style={[cmpStyles.badgeText, { color: item.badgeColor }]}>{item.badge}</Text>
+            </View>
+          </View>
+          <Text style={cmpStyles.best} numberOfLines={expanded ? undefined : 1}>{item.best}</Text>
+        </View>
+        <View style={[cmpStyles.chevronWrap, expanded && cmpStyles.chevronWrapOpen]}>
+          <ChevronDown
+            size={18}
+            color={expanded ? Colors.teal : Colors.mutedLight}
+            strokeWidth={2.4}
+            style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}
+          />
+        </View>
+      </Pressable>
+
+      {expanded && (
+        <View style={cmpStyles.detail}>
+          <View style={cmpStyles.chipRow}>
+            {item.pros.map((p, i) => (
+              <View key={i} style={cmpStyles.proChip}>
+                <Text style={cmpStyles.proCheck}>✓</Text>
+                <Text style={cmpStyles.proText}>{p}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={cmpStyles.chipRow}>
+            {item.watchOuts.map((w, i) => (
+              <View key={i} style={cmpStyles.watchChip}>
+                <Text style={cmpStyles.watchIcon}>⚠</Text>
+                <Text style={cmpStyles.watchText}>{w}</Text>
+              </View>
+            ))}
           </View>
         </View>
-      </View>
-
-      {/* Best for */}
-      <View style={cmpStyles.bestRow}>
-        <Text style={cmpStyles.bestLabel}>Best for  </Text>
-        <Text style={cmpStyles.bestValue}>{item.best}</Text>
-      </View>
-
-      {/* Pros */}
-      <View style={cmpStyles.prosBlock}>
-        {item.pros.map((p, i) => (
-          <View key={i} style={cmpStyles.proRow}>
-            <Text style={cmpStyles.proCheck}>✓</Text>
-            <Text style={cmpStyles.proText}>{p}</Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Watch-outs */}
-      <View style={cmpStyles.watchBlock}>
-        {item.watchOuts.map((w, i) => (
-          <View key={i} style={cmpStyles.watchRow}>
-            <Text style={cmpStyles.watchIcon}>⚠</Text>
-            <Text style={cmpStyles.watchText}>{w}</Text>
-          </View>
-        ))}
-      </View>
+      )}
     </View>
   );
 }
@@ -275,49 +309,69 @@ function ComparisonCard({ item }: { item: ComparisonOption }) {
 const cmpStyles = StyleSheet.create({
   card: {
     backgroundColor: Colors.cardWhite,
-    borderRadius: Radii.card,
+    borderRadius: Radii.cardLg,
     padding: Spacing.cardPad,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.borderLight,
     gap: Spacing.sm,
-    ...Shadows.xs,
+    overflow: 'hidden',
+    ...Shadows.sm,
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   iconBubble: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 46,
+    height: 46,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   iconEmoji: { fontSize: 22 },
-  headerText: { flex: 1, gap: 5 },
+  headerText: { flex: 1, gap: 3 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 7, flexWrap: 'wrap' },
   title: { fontSize: 16, fontWeight: '700', color: Colors.text, letterSpacing: -0.2 },
+  best: { ...Typography.caption, color: Colors.muted, lineHeight: 17 },
   badge: {
-    alignSelf: 'flex-start',
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 2,
+    borderRadius: 999,
+    flexShrink: 0,
+  },
+  badgeText: { fontSize: 10, fontWeight: '700' },
+  chevronWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  chevronWrapOpen: { backgroundColor: Colors.mint },
+  detail: { gap: 7, paddingTop: 2 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  proChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.successLight,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
     borderRadius: 999,
   },
-  badgeText: { fontSize: 11, fontWeight: '700' },
-  bestRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  bestLabel: { fontSize: 13, fontWeight: '700', color: Colors.teal, flexShrink: 0 },
-  bestValue: { ...Typography.body, color: Colors.textSecondary, flex: 1, lineHeight: 20 },
-  prosBlock: { gap: 6 },
-  proRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
-  proCheck: { fontSize: 13, color: Colors.success, marginTop: 1, flexShrink: 0 },
-  proText: { ...Typography.body, color: Colors.textSecondary, flex: 1, lineHeight: 22 },
-  watchBlock: {
-    gap: 6,
+  proCheck: { fontSize: 11, color: Colors.success, fontWeight: '800' },
+  proText: { ...Typography.caption, color: Colors.tealDark, fontWeight: '600' },
+  watchChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     backgroundColor: Colors.yellowLight,
-    borderRadius: Radii.sm,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
   },
-  watchRow: { flexDirection: 'row', gap: 7, alignItems: 'flex-start' },
-  watchIcon: { fontSize: 12, color: Colors.warning, marginTop: 3, flexShrink: 0 },
-  watchText: { ...Typography.caption, color: '#92400E', flex: 1, lineHeight: 18 },
+  watchIcon: { fontSize: 11, color: Colors.warning },
+  watchText: { ...Typography.caption, color: '#92400E', fontWeight: '600' },
 });
 
 /* ─── Main screen ───────────────────────────────────────────── */
@@ -325,6 +379,7 @@ const cmpStyles = StyleSheet.create({
 export default function EsimScreen() {
   const { trip, updateReadinessItem } = useTripStore();
   const [toastVisible, setToastVisible] = useState(false);
+  const [expandedCmp, setExpandedCmp] = useState<string | null>('esim');
   const durationDays = trip?.durationDays ?? 7;
 
   const isPlanned =
@@ -337,9 +392,27 @@ export default function EsimScreen() {
     setTimeout(() => setToastVisible(false), 2500);
   };
 
+  const toggleCmp = (id: string) => {
+    Haptics.selectionAsync();
+    animateLayout();
+    setExpandedCmp((cur) => (cur === id ? null : id));
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
+
+      {/* Cinematic ambient background */}
+      <LinearGradient
+        colors={['#EAF1F6', '#F1F4F8', '#F8FAFC']}
+        locations={[0, 0.4, 1]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 0.9 }}
+        style={styles.ambientBg}
+        pointerEvents="none"
+      />
+      <View style={styles.ambientBlob} pointerEvents="none" />
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
 
         {/* Back */}
@@ -349,85 +422,106 @@ export default function EsimScreen() {
 
         {/* ── 1. Header ── */}
         <LinearGradient
-          colors={['#0F172A', '#0B2D40']}
+          colors={['#0B1220', '#0B2D40', '#0C3742']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.heroCard}
         >
           <View style={styles.heroGlow} />
-          <Text style={styles.heroIcon}>📱</Text>
+          <View style={styles.heroGlowWarm} />
+          <Text style={styles.heroEyebrow}>STAY CONNECTED</Text>
           <Text style={styles.heroTitle}>Phone & Internet</Text>
           <Text style={styles.heroSubtitle}>
-            Stay connected in Egypt with eSIM, local SIM, WhatsApp, and Wi-Fi options.
+            eSIM, local SIM, WhatsApp & Wi-Fi — sorted before you land.
           </Text>
-          <TrustBadge trust={TRUST_META} compact />
+          <View style={styles.heroChips}>
+            {['eSIM', 'Local SIM', 'Wi-Fi'].map((c) => (
+              <View key={c} style={styles.heroChip}>
+                <Text style={styles.heroChipText}>{c}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.heroTrust}>
+            <TrustBadge trust={TRUST_META} compact />
+          </View>
         </LinearGradient>
 
         {/* ── 2. Best way to stay connected ── */}
         <View style={styles.recommendCard}>
+          <View style={styles.recommendGlow} pointerEvents="none" />
           <View style={styles.recommendHeader}>
             <View style={styles.recommendIcon}>
               <Text style={styles.recommendIconText}>✓</Text>
             </View>
             <Text style={styles.recommendTitle}>Best way to stay connected</Text>
           </View>
-          <Text style={styles.recommendBody}>
-            For most travelers, the easiest setup is an eSIM before arrival, WhatsApp for everyday communication, and hotel Wi-Fi as backup.
-          </Text>
           <View style={styles.recommendDivider} />
           {[
-            { icon: '📲', label: 'eSIM', note: 'easiest before you land' },
-            { icon: '🛬', label: 'Local SIM', note: 'often cheaper, takes time at arrival' },
-            { icon: '📶', label: 'Wi-Fi', note: 'useful backup, not your only plan' },
-            { icon: '💬', label: 'WhatsApp', note: 'messaging, calls, hosts, drivers, local contacts' },
+            { icon: '📲', label: 'eSIM', note: 'easiest before you land', tone: Colors.teal },
+            { icon: '🛬', label: 'Local SIM', note: 'cheaper, takes time at arrival', tone: Colors.warning },
+            { icon: '📶', label: 'Wi-Fi', note: 'useful backup, not your only plan', tone: Colors.muted },
+            { icon: '💬', label: 'WhatsApp', note: 'hosts, drivers & local contacts', tone: Colors.success },
           ].map((item, i) => (
             <View key={i} style={styles.recommendRow}>
-              <Text style={styles.recommendRowIcon}>{item.icon}</Text>
-              <Text style={styles.recommendRowLabel}>{item.label}:</Text>
-              <Text style={styles.recommendRowNote}>{item.note}</Text>
+              <View style={styles.recommendRowIconWrap}>
+                <Text style={styles.recommendRowIcon}>{item.icon}</Text>
+              </View>
+              <Text style={styles.recommendRowLabel}>{item.label}</Text>
+              <Text style={styles.recommendRowNote} numberOfLines={1}>{item.note}</Text>
+              <View style={[styles.recommendDot, { backgroundColor: item.tone }]} />
             </View>
           ))}
         </View>
 
         {/* ── 3. How much data? ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>How much data do you need?</Text>
+          <View style={styles.sectionTitleRow}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionTitle}>How much data do you need?</Text>
+          </View>
           <Text style={styles.sectionSub}>Based on a {durationDays}-day Egypt trip.</Text>
           <View style={styles.usageGrid}>
             {USAGE_PROFILES.map((p) => (
               <View key={p.label} style={[styles.usageCard, p.recommended && styles.usageCardRec]}>
+                {p.recommended && (
+                  <View style={styles.recBadge}>
+                    <Text style={styles.recText}>PICK</Text>
+                  </View>
+                )}
                 <Text style={styles.usageEmoji}>{p.emoji}</Text>
                 <Text style={styles.usageLabel}>{p.label}</Text>
                 <Text style={styles.usageRange}>{p.range}</Text>
                 <Text style={styles.usageDesc}>{p.desc}</Text>
-                {p.recommended && (
-                  <View style={styles.recBadge}>
-                    <Text style={styles.recText}>Recommended</Text>
-                  </View>
-                )}
               </View>
             ))}
           </View>
         </View>
 
-        {/* ── 4. eSIM, local SIM, or Wi-Fi? ── */}
+        {/* ── 4. eSIM, local SIM, or Wi-Fi? (expandable) ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>eSIM, local SIM, or Wi-Fi?</Text>
-          <Text style={styles.sectionSub}>Choose what fits your trip best.</Text>
+          <View style={styles.sectionTitleRow}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionTitle}>eSIM, local SIM, or Wi-Fi?</Text>
+            <Text style={styles.sectionHint}>Tap to expand</Text>
+          </View>
           <View style={styles.comparisonStack}>
             {COMPARISON.map((item) => (
-              <ComparisonCard key={item.id} item={item} />
+              <ComparisonCard
+                key={item.id}
+                item={item}
+                expanded={expandedCmp === item.id}
+                onToggle={() => toggleCmp(item.id)}
+              />
             ))}
           </View>
         </View>
 
         {/* ── 5. Communication tips ── */}
         <View style={styles.tipsCard}>
-          <Text style={styles.tipsTitle}>Communication tips</Text>
-          <Text style={styles.tipsBody}>
-            Mobile data is mainly useful for maps, translation, ride-hailing, WhatsApp, and emergency access.
-          </Text>
-          <View style={styles.tipsDivider} />
+          <View style={styles.tipsHeader}>
+            <Text style={styles.tipsEmoji}>💡</Text>
+            <Text style={styles.tipsTitle}>Smart tips</Text>
+          </View>
           {COMM_TIPS.map((tip, i) => (
             <View key={i} style={styles.tipRow}>
               <View style={styles.tipDot} />
@@ -438,15 +532,17 @@ export default function EsimScreen() {
 
         {/* ── 6. Provider options ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Provider options</Text>
+          <View style={styles.sectionTitleRow}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionTitle}>Provider options</Text>
+          </View>
           <Text style={styles.sectionSub}>
-            Use these as external planning links. Always check current Egypt plans and prices on the provider website.
+            External planning links — always confirm current Egypt plans & prices.
           </Text>
 
           {/* eSIM providers */}
           <View style={styles.providerGroup}>
             <Text style={styles.providerGroupLabel}>eSIM before travel</Text>
-            <Text style={styles.providerGroupSub}>Best if you want mobile data ready before landing.</Text>
             <View style={styles.providerList}>
               {ESIM_PROVIDERS.map((p) => (
                 <ProviderLinkCard key={p.id} provider={p} />
@@ -457,21 +553,19 @@ export default function EsimScreen() {
           {/* Local SIM */}
           <View style={styles.infoCard}>
             <View style={styles.infoHeader}>
-              <Text style={styles.infoIcon}>🛬</Text>
+              <View style={styles.infoIconBubble}>
+                <Text style={styles.infoIcon}>🛬</Text>
+              </View>
               <Text style={styles.infoTitle}>Local SIM at Cairo Airport</Text>
             </View>
-            <Text style={styles.infoDesc}>Usually a good option if you prefer buying data after arrival.</Text>
-            <View style={styles.infoList}>
+            <View style={styles.infoChipRow}>
               {[
-                'Vodafone, Orange, or Etisalat may be available at arrival areas',
-                'Bring your passport — may be required for registration',
-                'Carry small USD or EGP cash',
-                'Confirm current pricing at the counter',
-                'Allow extra time at the airport',
+                'Vodafone · Orange · Etisalat',
+                'Bring passport',
+                'Carry small cash',
               ].map((item, i) => (
-                <View key={i} style={styles.infoRow}>
-                  <View style={styles.infoDot} />
-                  <Text style={styles.infoRowText}>{item}</Text>
+                <View key={i} style={styles.infoChip}>
+                  <Text style={styles.infoChipText}>{item}</Text>
                 </View>
               ))}
             </View>
@@ -480,19 +574,19 @@ export default function EsimScreen() {
           {/* Wi-Fi backup */}
           <View style={styles.infoCard}>
             <View style={styles.infoHeader}>
-              <Text style={styles.infoIcon}>📶</Text>
+              <View style={styles.infoIconBubble}>
+                <Text style={styles.infoIcon}>📶</Text>
+              </View>
               <Text style={styles.infoTitle}>Wi-Fi backup</Text>
             </View>
-            <Text style={styles.infoDesc}>Useful at hotels, cafes, or airports — not ideal as your only connection.</Text>
-            <View style={styles.infoList}>
+            <View style={styles.infoChipRow}>
               {[
-                'Hotel, café, and airport Wi-Fi available in most areas',
-                'Download offline maps before travel',
-                'Keep mobile data available for transport and emergencies',
+                'Hotels · cafés · airports',
+                'Download offline maps',
+                'Keep data for emergencies',
               ].map((item, i) => (
-                <View key={i} style={styles.infoRow}>
-                  <View style={styles.infoDot} />
-                  <Text style={styles.infoRowText}>{item}</Text>
+                <View key={i} style={styles.infoChip}>
+                  <Text style={styles.infoChipText}>{item}</Text>
                 </View>
               ))}
             </View>
@@ -529,6 +623,16 @@ export default function EsimScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
+  ambientBg: { ...StyleSheet.absoluteFillObject },
+  ambientBlob: {
+    position: 'absolute',
+    top: -80,
+    right: -70,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(59,130,246,0.08)',
+  },
   content: {
     paddingHorizontal: Spacing.screenH,
     paddingBottom: 110,
@@ -543,22 +647,52 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: Radii.cardLg,
     padding: Spacing.xl,
-    gap: Spacing.sm,
+    gap: 6,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    ...Shadows.lg,
   },
   heroGlow: {
     position: 'absolute',
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
     backgroundColor: '#3B82F6',
-    opacity: 0.1,
-    top: -40,
-    right: -30,
+    opacity: 0.12,
+    top: -50,
+    right: -35,
   },
-  heroIcon: { fontSize: 34, marginBottom: 2 },
-  heroTitle: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3 },
-  heroSubtitle: { ...Typography.body, color: 'rgba(255,255,255,0.68)', lineHeight: 22 },
+  heroGlowWarm: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#14B8A6',
+    opacity: 0.08,
+    bottom: -50,
+    left: -30,
+  },
+  heroEyebrow: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: 'rgba(96,165,250,0.95)',
+    letterSpacing: 1.6,
+    marginBottom: 2,
+  },
+  heroTitle: { fontSize: 25, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.4 },
+  heroSubtitle: { ...Typography.body, color: 'rgba(255,255,255,0.68)', lineHeight: 21 },
+  heroChips: { flexDirection: 'row', gap: 7, marginTop: 10, flexWrap: 'wrap' },
+  heroChip: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  heroChipText: { fontSize: 11.5, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
+  heroTrust: { marginTop: 10 },
 
   /* Recommend card */
   recommendCard: {
@@ -566,32 +700,55 @@ const styles = StyleSheet.create({
     borderRadius: Radii.cardLg,
     padding: Spacing.cardPad,
     borderWidth: 1.5,
-    borderColor: Colors.teal + '30',
+    borderColor: Colors.teal + '33',
     gap: Spacing.sm,
-    ...Shadows.sm,
+    overflow: 'hidden',
+    ...Shadows.md,
+  },
+  recommendGlow: {
+    position: 'absolute',
+    top: -50,
+    right: -40,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: 'rgba(20,184,166,0.07)',
   },
   recommendHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   recommendIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: Colors.teal,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Shadows.teal,
   },
-  recommendIconText: { fontSize: 14, color: '#FFFFFF', fontWeight: '800' },
-  recommendTitle: { fontSize: 15, fontWeight: '700', color: Colors.text, flex: 1 },
-  recommendBody: { ...Typography.body, color: Colors.textSecondary, lineHeight: 22 },
-  recommendDivider: { height: 1, backgroundColor: Colors.border },
-  recommendRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
-  recommendRowIcon: { fontSize: 14, width: 20, flexShrink: 0 },
-  recommendRowLabel: { fontSize: 13, fontWeight: '700', color: Colors.text, flexShrink: 0 },
+  recommendIconText: { fontSize: 15, color: '#FFFFFF', fontWeight: '800' },
+  recommendTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, flex: 1, letterSpacing: -0.2 },
+  recommendDivider: { height: 1, backgroundColor: Colors.borderLight },
+  recommendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  recommendRowIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  recommendRowIcon: { fontSize: 15 },
+  recommendRowLabel: { fontSize: 13, fontWeight: '700', color: Colors.text, flexShrink: 0, width: 72 },
   recommendRowNote: { ...Typography.caption, color: Colors.muted, flex: 1, lineHeight: 18 },
+  recommendDot: { width: 7, height: 7, borderRadius: 3.5, flexShrink: 0 },
 
   /* Sections */
   section: { gap: Spacing.sm },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  sectionAccent: { width: 4, height: 16, borderRadius: 2, backgroundColor: Colors.teal },
   sectionTitle: { fontSize: 17, fontWeight: '700', color: Colors.text, letterSpacing: -0.2 },
-  sectionSub: { ...Typography.caption, color: Colors.muted, marginTop: -4 },
+  sectionHint: { ...Typography.caption, color: Colors.mutedLight, marginLeft: 'auto', fontWeight: '500' },
+  sectionSub: { ...Typography.caption, color: Colors.muted, marginTop: -2 },
 
   /* Usage grid */
   usageGrid: { flexDirection: 'row', gap: Spacing.sm },
@@ -601,59 +758,61 @@ const styles = StyleSheet.create({
     borderRadius: Radii.card,
     padding: Spacing.md,
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     borderWidth: 1.5,
-    borderColor: Colors.border,
-    ...Shadows.xs,
+    borderColor: Colors.borderLight,
+    overflow: 'hidden',
+    ...Shadows.sm,
   },
   usageCardRec: {
     borderColor: Colors.teal,
     backgroundColor: Colors.mint,
   },
-  usageEmoji: { fontSize: 20 },
+  usageEmoji: { fontSize: 22 },
   usageLabel: { ...Typography.captionBold, color: Colors.text, marginTop: 2 },
-  usageRange: { fontSize: 15, fontWeight: '800', color: Colors.teal, letterSpacing: -0.3 },
-  usageDesc: { ...Typography.caption, color: Colors.muted, textAlign: 'center', lineHeight: 15 },
+  usageRange: { fontSize: 16, fontWeight: '800', color: Colors.teal, letterSpacing: -0.3 },
+  usageDesc: { ...Typography.caption, color: Colors.muted, textAlign: 'center', lineHeight: 15, fontSize: 11 },
   recBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
     backgroundColor: Colors.teal,
     paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingVertical: 2,
     borderRadius: 999,
-    marginTop: 3,
   },
-  recText: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
+  recText: { fontSize: 8.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.4 },
 
   /* Comparison — stacked vertical */
-  comparisonStack: { gap: Spacing.sm },
+  comparisonStack: { gap: Spacing.md },
 
   /* Tips card */
   tipsCard: {
     backgroundColor: Colors.cardWhite,
-    borderRadius: Radii.card,
+    borderRadius: Radii.cardLg,
     padding: Spacing.cardPad,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.borderLight,
     gap: Spacing.sm,
-    ...Shadows.xs,
+    ...Shadows.sm,
   },
+  tipsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  tipsEmoji: { fontSize: 17 },
   tipsTitle: { fontSize: 15, fontWeight: '700', color: Colors.text },
-  tipsBody: { ...Typography.body, color: Colors.textSecondary, lineHeight: 22 },
-  tipsDivider: { height: 1, backgroundColor: Colors.border },
   tipRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start' },
   tipDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: Colors.teal,
-    marginTop: 8,
+    marginTop: 7,
     flexShrink: 0,
   },
-  tipText: { ...Typography.body, color: Colors.textSecondary, flex: 1, lineHeight: 22 },
+  tipText: { ...Typography.bodySm, color: Colors.textSecondary, flex: 1, lineHeight: 20 },
 
   /* Provider group */
   providerGroup: { gap: Spacing.xs },
   providerGroupLabel: { fontSize: 14, fontWeight: '700', color: Colors.text },
-  providerGroupSub: { ...Typography.caption, color: Colors.muted },
   providerList: { gap: Spacing.sm, marginTop: 4 },
 
   /* Info cards (local SIM, Wi-Fi) */
@@ -662,25 +821,31 @@ const styles = StyleSheet.create({
     borderRadius: Radii.card,
     padding: Spacing.cardPad,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.borderLight,
     gap: Spacing.sm,
-    ...Shadows.xs,
+    ...Shadows.sm,
   },
   infoHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  infoIcon: { fontSize: 20 },
-  infoTitle: { fontSize: 15, fontWeight: '700', color: Colors.text },
-  infoDesc: { ...Typography.caption, color: Colors.muted, lineHeight: 18 },
-  infoList: { gap: 6 },
-  infoRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
-  infoDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: Colors.mutedLight,
-    marginTop: 8,
-    flexShrink: 0,
+  infoIconBubble: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  infoRowText: { ...Typography.caption, color: Colors.textSecondary, flex: 1, lineHeight: 18 },
+  infoIcon: { fontSize: 17 },
+  infoTitle: { fontSize: 15, fontWeight: '700', color: Colors.text },
+  infoChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  infoChip: {
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  infoChipText: { ...Typography.caption, color: Colors.textSecondary, fontWeight: '500' },
 
   /* CTA */
   ctaSection: { gap: Spacing.sm },

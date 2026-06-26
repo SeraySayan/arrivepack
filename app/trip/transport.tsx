@@ -7,8 +7,12 @@ import {
   ScrollView,
   Pressable,
   StatusBar,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ChevronDown } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as Haptics from '../../src/utils/haptics';
 import { useTripStore } from '../../src/store/tripStore';
@@ -23,6 +27,16 @@ import { Radii, Spacing } from '../../src/theme/spacing';
 import { Shadows } from '../../src/theme/shadows';
 import type { ReadinessStatus } from '../../src/types';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const animateLayout = () => {
+  if (Platform.OS !== 'web') {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  }
+};
+
 const ITEM_ID = 'arrival_transport';
 
 const TRUST_META = {
@@ -31,15 +45,12 @@ const TRUST_META = {
   lastCheckedLabel: 'Estimated ranges · Sample data',
 };
 
-/* ─── Data (mirrors PREPARATION_CHECKLIST arrival_transport in egypt.ts) ── */
+/* ─── Data ───────────────────────────────────────────────────── */
 
-const KEY_THINGS = [
-  'Cairo Airport to central Cairo typically takes 30–60 minutes depending on traffic.',
-  'Uber and Careem are widely available and the safest option for most tourists.',
-  'Standard taxis exist — always agree on fare before getting in, avoid unmarked vehicles.',
-  'Cairo traffic is heavy — plan extra time for morning/evening airport arrivals.',
-  'The Cairo Metro is useful for some routes but not practical for first arrival with luggage.',
-  'For day trips (Pyramids, Saqqara, Luxor), a private driver or tour is most convenient.',
+const BEST_CHOICE = [
+  'Pre-book a transfer or use Uber / Careem',
+  'Avoid unmarked taxis & airport touts',
+  'Keep some EGP cash for tips',
 ];
 
 const TRANSFER_OPTIONS = [
@@ -47,59 +58,58 @@ const TRANSFER_OPTIONS = [
     id: 'uber_careem',
     icon: '📱',
     title: 'Uber / Careem',
-    bestFor: 'Most situations — Balanced and Premium travellers',
-    cost: '200–400 EGP airport to central Cairo (estimated)',
-    pros: ['Tracked rides with GPS', 'Transparent pricing — no negotiation', 'Available 24/7'],
-    watchOut: 'Surge pricing at peak hours. Airport pick-up point can be confusing — follow in-app directions.',
+    bestFor: 'Most travellers',
+    cost: '200–400 EGP',
+    pros: ['Tracked rides', 'Fixed pricing', '24/7'],
+    watchOut: 'Surge at peak hours; follow in-app pickup point.',
     recommended: true,
   },
   {
     id: 'private_transfer',
     icon: '🚐',
-    title: 'Pre-arranged private transfer',
-    bestFor: 'Premium travellers, first-time visitors wanting zero stress',
-    cost: '40–80 USD depending on provider (estimated)',
-    pros: ['Driver meets you at arrivals', 'Fixed price agreed in advance', 'No navigation stress on arrival'],
-    watchOut: 'More expensive than ride-hailing. Book in advance through hotel or reputable provider.',
+    title: 'Pre-arranged transfer',
+    bestFor: 'Zero-stress arrival',
+    cost: '40–80 USD',
+    pros: ['Meets you at arrivals', 'Fixed price', 'No navigation stress'],
+    watchOut: 'Pricier; book via hotel or a reputable provider.',
     recommended: false,
   },
   {
     id: 'airport_taxi',
     icon: '🚕',
     title: 'Official airport taxi',
-    bestFor: 'Budget travellers willing to negotiate',
-    cost: '250–500 EGP — negotiate before entering',
-    pros: ['Available immediately outside terminal', 'Can be cheaper than ride-hailing'],
-    watchOut: 'Negotiate firmly before getting in. Avoid unofficial drivers approaching inside the terminal.',
+    bestFor: 'Budget, willing to haggle',
+    cost: '250–500 EGP',
+    pros: ['Available immediately', 'Can be cheaper'],
+    watchOut: 'Agree the fare firmly first; avoid unofficial drivers.',
     recommended: false,
   },
   {
     id: 'metro',
     icon: '🚇',
     title: 'Cairo Metro',
-    bestFor: 'Budget travellers moving between central areas — not from airport',
-    cost: '5–10 EGP per journey (estimated)',
-    pros: ['Very cheap', 'Avoids traffic on some routes', 'Air-conditioned'],
-    watchOut: 'Does not connect to Cairo Airport. Not practical for first arrival with luggage.',
+    bestFor: 'Central trips, not arrival',
+    cost: '5–10 EGP',
+    pros: ['Very cheap', 'Avoids traffic', 'Air-conditioned'],
+    watchOut: 'No airport link; impractical with luggage on arrival.',
     recommended: false,
   },
 ];
 
 const CITY_TRANSPORT = [
-  { icon: '📱', title: 'Uber / Careem', note: 'Most situations — safe, tracked, transparent pricing' },
-  { icon: '🚕', title: 'White taxi', note: 'Short local trips — negotiate fare before getting in' },
-  { icon: '🚇', title: 'Cairo Metro', note: 'Tahrir Square, Coptic Cairo, some central routes' },
-  { icon: '🚶', title: 'Walking', note: 'Zamalek, certain downtown areas and markets' },
-  { icon: '🚗', title: 'Private driver', note: 'Day trips, Giza, Saqqara — agree price upfront' },
+  { icon: '📱', title: 'Uber / Careem', note: 'Safe, tracked, transparent pricing' },
+  { icon: '🚕', title: 'White taxi', note: 'Short trips — agree fare first' },
+  { icon: '🚇', title: 'Cairo Metro', note: 'Tahrir, Coptic Cairo, central routes' },
+  { icon: '🚶', title: 'Walking', note: 'Zamalek & downtown markets' },
+  { icon: '🚗', title: 'Private driver', note: 'Day trips — agree price upfront' },
 ];
 
-const BEFORE_YOU_GO = [
-  'Download Uber and Careem before departure — set up your payment method.',
-  'Know your hotel\'s full address in English and Arabic for drivers.',
-  'Avoid accepting rides from unmarked vehicles or men approaching inside the terminal.',
-  'Allow extra time if landing during Cairo morning or evening rush hours.',
-  'Have some EGP cash available on arrival for taxis or tips.',
-  'For day trips, ask your hotel to recommend a trusted private driver.',
+const ARRIVAL_CHECKLIST = [
+  'Confirm your destination address',
+  'Save hotel address offline',
+  'Use official pickup or an app ride',
+  'Confirm price / route before leaving',
+  'Keep small cash available',
 ];
 
 const SOURCE_LINKS = [
@@ -125,19 +135,74 @@ const SOURCE_LINKS = [
   },
 ];
 
-/* ─── Small reusable components ──────────────────────────────── */
+/* ─── Reusable presentational components ─────────────────────── */
 
-function SectionHeader({ title }: { title: string }) {
-  return <Text style={styles.sectionTitle}>{title}</Text>;
+function SectionHeader({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <View style={styles.sectionTitleRow}>
+      <View style={styles.sectionAccent} />
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
+    </View>
+  );
 }
 
-function CheckRow({ text, last = false }: { text: string; last?: boolean }) {
+type TransferOption = (typeof TRANSFER_OPTIONS)[number];
+
+function TransferOptionCard({
+  opt,
+  expanded,
+  onToggle,
+}: {
+  opt: TransferOption;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <View style={[styles.checkRow, !last && styles.checkRowBorder]}>
-      <View style={styles.checkBox}>
-        <Text style={styles.checkMark}>○</Text>
-      </View>
-      <Text style={styles.checkText}>{text}</Text>
+    <View style={[styles.optionCard, opt.recommended && styles.optionCardRec]}>
+      {opt.recommended && (
+        <View style={styles.recRibbon}>
+          <Text style={styles.recRibbonText}>RECOMMENDED</Text>
+        </View>
+      )}
+
+      <Pressable onPress={onToggle} style={styles.optionTop}>
+        <View style={styles.optionIconBubble}>
+          <Text style={styles.optionIcon}>{opt.icon}</Text>
+        </View>
+        <View style={styles.optionHeaderText}>
+          <Text style={styles.optionTitle}>{opt.title}</Text>
+          <Text style={styles.optionBestFor} numberOfLines={1}>{opt.bestFor}</Text>
+        </View>
+        <View style={styles.costPill}>
+          <Text style={styles.costPillText}>{opt.cost}</Text>
+        </View>
+        <View style={[styles.chevronWrap, expanded && styles.chevronWrapOpen]}>
+          <ChevronDown
+            size={18}
+            color={expanded ? Colors.teal : Colors.mutedLight}
+            strokeWidth={2.4}
+            style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}
+          />
+        </View>
+      </Pressable>
+
+      {expanded && (
+        <View style={styles.optionDetail}>
+          <View style={styles.chipRow}>
+            {opt.pros.map((p, i) => (
+              <View key={i} style={styles.proChip}>
+                <Text style={styles.proChipCheck}>✓</Text>
+                <Text style={styles.proChipText}>{p}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.watchCard}>
+            <Text style={styles.watchIcon}>⚠</Text>
+            <Text style={styles.watchText}>{opt.watchOut}</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -148,6 +213,7 @@ export default function TransportScreen() {
   const { trip, updateReadinessItem } = useTripStore();
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>('uber_careem');
 
   const readinessItem = trip?.readiness.items.find((i) => i.id === ITEM_ID);
   const status: ReadinessStatus = readinessItem?.status ?? 'not_set';
@@ -166,9 +232,27 @@ export default function TransportScreen() {
     showToast(isReady ? 'Status updated' : 'Arrival & Transport marked as ready ✅');
   };
 
+  const toggleOption = (id: string) => {
+    Haptics.selectionAsync();
+    animateLayout();
+    setExpandedId((cur) => (cur === id ? null : id));
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
+
+      {/* Cinematic ambient background */}
+      <LinearGradient
+        colors={['#EAF3F2', '#F1F5F8', '#F8FAFC']}
+        locations={[0, 0.4, 1]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 0.9 }}
+        style={styles.ambientBg}
+        pointerEvents="none"
+      />
+      <View style={styles.ambientBlob} pointerEvents="none" />
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
 
         {/* Back */}
@@ -178,16 +262,17 @@ export default function TransportScreen() {
 
         {/* ── 1. Hero ── */}
         <LinearGradient
-          colors={['#0F172A', '#0F2E2B']}
+          colors={['#0B1220', '#0F2E2B', '#0C3742']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.heroCard}
         >
           <View style={styles.heroGlow} />
-          <Text style={styles.heroIcon}>🚗</Text>
+          <View style={styles.heroGlowWarm} />
+          <Text style={styles.heroEyebrow}>AIRPORT ARRIVAL</Text>
           <Text style={styles.heroTitle}>Arrival & Transport</Text>
           <Text style={styles.heroSub}>
-            Plan your airport transfer and understand how to get around Cairo.
+            Getting from Cairo Airport to your stay — the easy way.
           </Text>
           <View style={styles.heroBadges}>
             <StatusPill status={status} />
@@ -195,70 +280,51 @@ export default function TransportScreen() {
           </View>
         </LinearGradient>
 
-        {/* ── 2. Key things to know ── */}
+        {/* ── 2. Best arrival choice ── */}
         <View style={styles.section}>
-          <SectionHeader title="Key things to know" />
-          <View style={styles.bulletCard}>
-            {KEY_THINGS.map((point, i) => (
-              <View key={i} style={[styles.bulletRow, i < KEY_THINGS.length - 1 && styles.bulletRowBorder]}>
-                <View style={styles.bulletDot} />
-                <Text style={styles.bulletText}>{point}</Text>
+          <SectionHeader title="Best arrival choice" />
+          <View style={styles.recCard}>
+            <View style={styles.recGlow} pointerEvents="none" />
+            <View style={styles.recHeader}>
+              <View style={styles.recIconBubble}>
+                <Text style={styles.recIconText}>✓</Text>
+              </View>
+              <Text style={styles.recTitle}>For most first-time travellers</Text>
+            </View>
+            <View style={styles.recDivider} />
+            {BEST_CHOICE.map((b, i) => (
+              <View key={i} style={styles.recRow}>
+                <View style={styles.recDot} />
+                <Text style={styles.recText}>{b}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        {/* ── 3. Airport transfer options ── */}
+        {/* ── 3. Transport options (expandable) ── */}
         <View style={styles.section}>
-          <SectionHeader title="Airport transfer options" />
+          <SectionHeader title="Transport options" hint="Tap to expand" />
           <View style={styles.optionsList}>
             {TRANSFER_OPTIONS.map((opt) => (
-              <View key={opt.id} style={[styles.optionCard, opt.recommended && styles.optionCardHighlight]}>
-                {/* Header */}
-                <View style={styles.optionHeader}>
-                  <Text style={styles.optionIcon}>{opt.icon}</Text>
-                  <View style={styles.optionHeaderText}>
-                    <Text style={styles.optionTitle}>{opt.title}</Text>
-                    {opt.recommended && (
-                      <View style={styles.recBadge}>
-                        <Text style={styles.recBadgeText}>Recommended</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-                {/* Best for */}
-                <Text style={styles.optionBestFor}>Best for: {opt.bestFor}</Text>
-                {/* Cost */}
-                <View style={styles.costRow}>
-                  <Text style={styles.costLabel}>Est. cost</Text>
-                  <Text style={styles.costValue}>{opt.cost}</Text>
-                </View>
-                {/* Pros */}
-                <View style={styles.prosList}>
-                  {opt.pros.map((p, i) => (
-                    <View key={i} style={styles.proRow}>
-                      <Text style={styles.proCheck}>✓</Text>
-                      <Text style={styles.proText}>{p}</Text>
-                    </View>
-                  ))}
-                </View>
-                {/* Watch out */}
-                <View style={styles.watchCard}>
-                  <Text style={styles.watchIcon}>⚠</Text>
-                  <Text style={styles.watchText}>{opt.watchOut}</Text>
-                </View>
-              </View>
+              <TransferOptionCard
+                key={opt.id}
+                opt={opt}
+                expanded={expandedId === opt.id}
+                onToggle={() => toggleOption(opt.id)}
+              />
             ))}
           </View>
         </View>
 
-        {/* ── 4. Getting around the city ── */}
+        {/* ── 4. Getting around Cairo ── */}
         <View style={styles.section}>
           <SectionHeader title="Getting around Cairo" />
           <View style={styles.cityCard}>
             {CITY_TRANSPORT.map((item, i) => (
               <View key={i} style={[styles.cityRow, i < CITY_TRANSPORT.length - 1 && styles.cityRowBorder]}>
-                <Text style={styles.cityIcon}>{item.icon}</Text>
+                <View style={styles.cityIconBubble}>
+                  <Text style={styles.cityIcon}>{item.icon}</Text>
+                </View>
                 <View style={styles.cityText}>
                   <Text style={styles.cityTitle}>{item.title}</Text>
                   <Text style={styles.cityNote}>{item.note}</Text>
@@ -278,21 +344,26 @@ export default function TransportScreen() {
           </View>
         </View>
 
-        {/* ── 6. Before you go checklist ── */}
+        {/* ── 6. Airport arrival checklist ── */}
         <View style={styles.section}>
-          <SectionHeader title="Before you go" />
-          <View style={styles.checklistCard}>
-            {BEFORE_YOU_GO.map((item, i) => (
-              <CheckRow key={i} text={item} last={i === BEFORE_YOU_GO.length - 1} />
+          <SectionHeader title="Airport arrival checklist" />
+          <View style={styles.checkGrid}>
+            {ARRIVAL_CHECKLIST.map((item, i) => (
+              <View key={i} style={styles.checkTile}>
+                <View style={styles.checkCircle}>
+                  <Text style={styles.checkTick}>✓</Text>
+                </View>
+                <Text style={styles.checkTileText}>{item}</Text>
+              </View>
             ))}
           </View>
         </View>
 
-        {/* ── Warning ── */}
+        {/* ── Safety note ── */}
         <View style={styles.warningCard}>
           <Text style={styles.warningIcon}>⚠️</Text>
           <Text style={styles.warningText}>
-            Transport prices are estimated ranges only and can change significantly. Always agree on the price before starting a journey with non-app taxis.
+            Prices are estimates and can change. Always agree the fare before starting any non-app taxi ride.
           </Text>
         </View>
 
@@ -301,7 +372,7 @@ export default function TransportScreen() {
           <Text style={styles.ctaHelper}>
             {isReady
               ? 'Arrival & Transport is marked ready. Tap to undo.'
-              : 'Mark this ready after choosing how you\'ll get from the airport and move around Egypt.'}
+              : 'Mark ready after choosing how you\'ll get from the airport and around Egypt.'}
           </Text>
           <AppButton
             label={isReady ? '✓ I planned arrival transport — tap to undo' : 'I planned arrival transport'}
@@ -322,6 +393,16 @@ export default function TransportScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
+  ambientBg: { ...StyleSheet.absoluteFillObject },
+  ambientBlob: {
+    position: 'absolute',
+    top: -80,
+    right: -70,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(20,184,166,0.09)',
+  },
   content: {
     paddingHorizontal: Spacing.screenH,
     paddingBottom: 110,
@@ -336,121 +417,165 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: Radii.cardLg,
     padding: Spacing.xl,
-    gap: Spacing.sm,
+    gap: 6,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    ...Shadows.lg,
   },
   heroGlow: {
     position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     backgroundColor: '#14B8A6',
-    opacity: 0.12,
-    top: -50,
-    right: -40,
+    opacity: 0.14,
+    top: -60,
+    right: -45,
   },
-  heroIcon: { fontSize: 36, marginBottom: 4 },
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.3,
+  heroGlowWarm: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#F59E0B',
+    opacity: 0.06,
+    bottom: -50,
+    left: -30,
   },
-  heroSub: {
-    ...Typography.body,
-    color: 'rgba(255,255,255,0.68)',
-    lineHeight: 22,
+  heroEyebrow: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: 'rgba(45,212,191,0.9)',
+    letterSpacing: 1.6,
+    marginBottom: 2,
   },
+  heroTitle: { fontSize: 25, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.4 },
+  heroSub: { ...Typography.body, color: 'rgba(255,255,255,0.68)', lineHeight: 21 },
   heroBadges: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    marginTop: 4,
+    marginTop: 8,
     flexWrap: 'wrap',
   },
 
   /* Sections */
   section: { gap: Spacing.sm },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#0F172A',
-    letterSpacing: -0.2,
-  },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  sectionAccent: { width: 4, height: 16, borderRadius: 2, backgroundColor: Colors.teal },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#0F172A', letterSpacing: -0.2 },
+  sectionHint: { ...Typography.caption, color: Colors.mutedLight, marginLeft: 'auto', fontWeight: '500' },
 
-  /* Bullet card */
-  bulletCard: {
+  /* Best choice rec card */
+  recCard: {
     backgroundColor: Colors.cardWhite,
-    borderRadius: Radii.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-    ...Shadows.xs,
-  },
-  bulletRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    alignItems: 'flex-start',
-    paddingVertical: 11,
-    paddingHorizontal: Spacing.base,
-  },
-  bulletRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  bulletDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.teal,
-    marginTop: 8,
-    flexShrink: 0,
-  },
-  bulletText: { ...Typography.body, color: Colors.textSecondary, flex: 1, lineHeight: 21 },
-
-  /* Transfer option cards */
-  optionsList: { gap: Spacing.sm },
-  optionCard: {
-    backgroundColor: Colors.cardWhite,
-    borderRadius: Radii.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    borderRadius: Radii.cardLg,
+    borderWidth: 1.5,
+    borderColor: Colors.teal + '33',
     padding: Spacing.cardPad,
     gap: Spacing.sm,
-    ...Shadows.xs,
+    overflow: 'hidden',
+    ...Shadows.md,
   },
-  optionCardHighlight: {
-    borderColor: Colors.teal,
-    borderWidth: 1.5,
+  recGlow: {
+    position: 'absolute',
+    top: -50,
+    right: -40,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: 'rgba(20,184,166,0.07)',
   },
-  optionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  optionIcon: { fontSize: 24 },
-  optionHeaderText: { flex: 1, gap: 4 },
-  optionTitle: { fontSize: 15, fontWeight: '700', color: Colors.text },
-  recBadge: {
-    backgroundColor: Colors.mint,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    alignSelf: 'flex-start',
-  },
-  recBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.tealDark },
-  optionBestFor: { ...Typography.caption, color: Colors.teal, fontWeight: '600', lineHeight: 18 },
-  costRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  recHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  recIconBubble: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.teal,
     alignItems: 'center',
-    backgroundColor: Colors.borderLight,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 7,
-    borderRadius: Radii.sm,
+    justifyContent: 'center',
+    ...Shadows.teal,
   },
-  costLabel: { ...Typography.caption, color: Colors.muted },
-  costValue: { ...Typography.caption, color: Colors.text, fontWeight: '600', flex: 1, textAlign: 'right' },
-  prosList: { gap: 5 },
-  proRow: { flexDirection: 'row', gap: 7, alignItems: 'flex-start' },
-  proCheck: { fontSize: 12, color: Colors.success, marginTop: 2, flexShrink: 0 },
-  proText: { ...Typography.caption, color: Colors.textSecondary, flex: 1, lineHeight: 18 },
+  recIconText: { fontSize: 15, color: '#FFFFFF', fontWeight: '800' },
+  recTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, flex: 1, letterSpacing: -0.2 },
+  recDivider: { height: 1, backgroundColor: Colors.borderLight },
+  recRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  recDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.teal, flexShrink: 0 },
+  recText: { ...Typography.bodySm, color: Colors.textSecondary, flex: 1, lineHeight: 20, fontWeight: '500' },
+
+  /* Option cards (expandable) */
+  optionsList: { gap: Spacing.md },
+  optionCard: {
+    backgroundColor: Colors.cardWhite,
+    borderRadius: Radii.cardLg,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    padding: Spacing.cardPad,
+    gap: Spacing.sm,
+    overflow: 'hidden',
+    ...Shadows.sm,
+  },
+  optionCardRec: { borderColor: Colors.teal + '55', borderWidth: 1.5 },
+  recRibbon: {
+    position: 'absolute',
+    top: 12,
+    right: -32,
+    backgroundColor: Colors.teal,
+    paddingHorizontal: 34,
+    paddingVertical: 3,
+    transform: [{ rotate: '45deg' }],
+  },
+  recRibbonText: { fontSize: 8.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6 },
+  optionTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  optionIconBubble: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.04)',
+  },
+  optionIcon: { fontSize: 22 },
+  optionHeaderText: { flex: 1, gap: 2 },
+  optionTitle: { fontSize: 15.5, fontWeight: '700', color: Colors.text, letterSpacing: -0.2 },
+  optionBestFor: { ...Typography.caption, color: Colors.teal, fontWeight: '600' },
+  costPill: {
+    backgroundColor: Colors.background,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    flexShrink: 0,
+  },
+  costPillText: { fontSize: 11, fontWeight: '700', color: Colors.text },
+  chevronWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  chevronWrapOpen: { backgroundColor: Colors.mint },
+  optionDetail: { gap: Spacing.sm, paddingTop: 2 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  proChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.successLight,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  proChipCheck: { fontSize: 11, color: Colors.success, fontWeight: '800' },
+  proChipText: { ...Typography.caption, color: Colors.tealDark, fontWeight: '600' },
   watchCard: {
     flexDirection: 'row',
     gap: 7,
@@ -468,9 +593,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cardWhite,
     borderRadius: Radii.card,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.borderLight,
     overflow: 'hidden',
-    ...Shadows.xs,
+    ...Shadows.sm,
   },
   cityRow: {
     flexDirection: 'row',
@@ -479,51 +604,51 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     paddingHorizontal: Spacing.base,
   },
-  cityRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+  cityRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
+  cityIconBubble: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  cityIcon: { fontSize: 18, width: 26, textAlign: 'center', flexShrink: 0 },
+  cityIcon: { fontSize: 16 },
   cityText: { flex: 1 },
-  cityTitle: { fontSize: 13, fontWeight: '700', color: Colors.text },
+  cityTitle: { fontSize: 13.5, fontWeight: '700', color: Colors.text },
   cityNote: { ...Typography.caption, color: Colors.textSecondary, lineHeight: 17, marginTop: 1 },
 
   /* Links */
   linksList: { gap: Spacing.sm },
 
-  /* Checklist */
-  checklistCard: {
+  /* Check grid */
+  checkGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  checkTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '47.5%',
+    flexGrow: 1,
     backgroundColor: Colors.cardWhite,
     borderRadius: Radii.card,
     borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
+    borderColor: Colors.borderLight,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
     ...Shadows.xs,
   },
-  checkRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    alignItems: 'flex-start',
-    paddingVertical: 12,
-    paddingHorizontal: Spacing.base,
-  },
-  checkRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  checkBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+  checkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.mint,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    marginTop: 2,
   },
-  checkMark: { fontSize: 9, color: Colors.mutedLight },
-  checkText: { ...Typography.body, color: Colors.textSecondary, flex: 1, lineHeight: 21 },
+  checkTick: { fontSize: 11, color: Colors.tealDark, fontWeight: '800' },
+  checkTileText: { ...Typography.caption, color: Colors.textSecondary, flex: 1, fontWeight: '500', lineHeight: 16 },
 
   /* Warning */
   warningCard: {
@@ -536,8 +661,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.yellow + '50',
     alignItems: 'flex-start',
   },
-  warningIcon: { fontSize: 18, flexShrink: 0 },
-  warningText: { ...Typography.body, color: '#92400E', flex: 1, lineHeight: 22 },
+  warningIcon: { fontSize: 17, flexShrink: 0 },
+  warningText: { ...Typography.bodySm, color: '#92400E', flex: 1, lineHeight: 20 },
 
   /* CTA */
   ctaSection: { gap: Spacing.sm },

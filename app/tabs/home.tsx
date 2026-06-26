@@ -210,6 +210,19 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
+
+      {/* Cinematic ambient background wash — fixed behind the scroll content */}
+      <LinearGradient
+        colors={['#EAF3F2', '#F1F5F8', '#F4F6FA']}
+        locations={[0, 0.4, 1]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 0.9 }}
+        style={styles.ambientBg}
+        pointerEvents="none"
+      />
+      <View style={styles.ambientBlobTeal} pointerEvents="none" />
+      <View style={styles.ambientBlobSand} pointerEvents="none" />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
@@ -219,10 +232,14 @@ export default function HomeScreen() {
         <FadeInView>
           <View style={styles.header}>
             <View style={styles.headerLeft}>
+              <Text style={styles.headerEyebrow}>YOUR TRIP CONCIERGE</Text>
               <Text style={styles.headerTitle}>Your Egypt Pack</Text>
-              <Text style={styles.headerMeta}>
-                {trip.durationDays} days · {formatBudgetStyle(trip.budgetStyle)} · {formatTravelStyle(trip.travelStyle)}
-              </Text>
+              <View style={styles.headerMetaRow}>
+                <Text style={styles.headerFlag}>🇪🇬</Text>
+                <Text style={styles.headerMeta}>
+                  {trip.durationDays} days · {formatBudgetStyle(trip.budgetStyle)} · {formatTravelStyle(trip.travelStyle)}
+                </Text>
+              </View>
             </View>
             <Pressable style={styles.settingsBtn}>
               <Settings2 size={18} color={Colors.muted} />
@@ -240,13 +257,17 @@ export default function HomeScreen() {
           style={({ pressed }) => [styles.heroCardWrap, pressed && { opacity: 0.95 }]}
         >
           <LinearGradient
-            colors={['#0F172A', '#0F2E2B', '#0D3340']}
+            colors={['#0B1220', '#0F2E2B', '#0C3742']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroCard}
           >
-            {/* Ambient glow */}
+            {/* Ambient glows — layered for cinematic depth */}
             <View style={styles.heroGlow} />
+            <View style={styles.heroGlowWarm} />
+
+            {/* Eyebrow */}
+            <Text style={styles.heroEyebrow}>TRIP READINESS</Text>
 
             {/* Score row */}
             <View style={styles.heroTop}>
@@ -285,7 +306,7 @@ export default function HomeScreen() {
             {/* Divider */}
             <View style={styles.heroDivider} />
 
-            {/* Compact category dots */}
+            {/* Compact category chips */}
             <View style={styles.heroCategories}>
               {COMPACT_CATEGORIES.map((cat) => {
                 const item = items.find((i) => i.id === cat.id);
@@ -293,7 +314,7 @@ export default function HomeScreen() {
                 return (
                   <View key={cat.id} style={styles.heroCatItem}>
                     <View style={[styles.heroCatDot, { backgroundColor: cfg.color }]} />
-                    <Text style={styles.heroCatLabel}>{cat.label}</Text>
+                    <Text style={styles.heroCatLabel} numberOfLines={1}>{cat.label}</Text>
                     <Text style={[styles.heroCatStatus, { color: cfg.color }]}>{cfg.short}</Text>
                   </View>
                 );
@@ -360,7 +381,10 @@ export default function HomeScreen() {
 
         {/* ── 3. Your next step ── */}
         <FadeInView delay={140} style={styles.section}>
-          <Text style={styles.sectionTitle}>Your next step</Text>
+          <View style={styles.sectionTitleRow}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionTitle}>Your next step</Text>
+          </View>
 
           <Pressable
             onPress={() => {
@@ -369,8 +393,17 @@ export default function HomeScreen() {
             }}
             style={({ pressed }) => [styles.nextStepCard, pressed && styles.cardPressed]}
           >
-            <View style={styles.nextStepAccent} />
+            <LinearGradient
+              colors={[Colors.teal, Colors.tealDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.nextStepAccent}
+            />
+            <View style={styles.nextStepIconBubble}>
+              <ArrowRight size={18} color={Colors.teal} strokeWidth={2.6} />
+            </View>
             <View style={styles.nextStepBody}>
+              <Text style={styles.nextStepEyebrow}>UP NEXT</Text>
               <Text style={styles.nextStepTitle}>{nextStep.title}</Text>
               <Text style={styles.nextStepSub}>{nextStep.sub}</Text>
             </View>
@@ -393,7 +426,10 @@ export default function HomeScreen() {
 
         {/* ── 4. Explore your trip ── */}
         <FadeInView delay={200} style={styles.section}>
-          <Text style={styles.sectionTitle}>Explore your trip</Text>
+          <View style={styles.sectionTitleRow}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionTitle}>Explore your trip</Text>
+          </View>
           <View style={styles.tripGrid}>
             {TRIP_SECTIONS.map((sec) => (
               <Pressable
@@ -411,7 +447,9 @@ export default function HomeScreen() {
                   <Text style={styles.tripCardLabel}>{sec.label}</Text>
                   <Text style={styles.tripCardSub}>{sec.sub}</Text>
                 </View>
-                <ChevronRight size={16} color={Colors.mutedLight} />
+                <View style={styles.tripChevron}>
+                  <ChevronRight size={15} color={Colors.mutedLight} strokeWidth={2.4} />
+                </View>
               </Pressable>
             ))}
           </View>
@@ -419,7 +457,10 @@ export default function HomeScreen() {
 
         {/* ── 5. Day 1 preview ── */}
         <FadeInView delay={260} style={styles.section}>
-          <Text style={styles.sectionTitle}>Your first day</Text>
+          <View style={styles.sectionTitleRow}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionTitle}>Your first day</Text>
+          </View>
           <Pressable
             onPress={() => {
               Haptics.selectionAsync();
@@ -427,6 +468,7 @@ export default function HomeScreen() {
             }}
             style={({ pressed }) => [styles.day1Card, pressed && styles.cardPressed]}
           >
+            <View style={styles.day1Glow} pointerEvents="none" />
             <View style={styles.day1Header}>
               <View style={styles.day1Badge}>
                 <Text style={styles.day1BadgeText}>Day 1</Text>
@@ -483,9 +525,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F4F6FA',
   },
+  ambientBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  ambientBlobTeal: {
+    position: 'absolute',
+    top: -90,
+    right: -70,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(20,184,166,0.10)',
+  },
+  ambientBlobSand: {
+    position: 'absolute',
+    top: 120,
+    left: -90,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(251,191,36,0.07)',
+  },
   scroll: {
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 14,
     paddingBottom: 130,
     gap: 0,
   },
@@ -495,54 +558,88 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 22,
   },
   headerLeft: { flex: 1 },
+  headerEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.teal,
+    letterSpacing: 1.4,
+    marginBottom: 4,
+  },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 27,
     fontWeight: '800',
     color: '#0F172A',
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
+  },
+  headerMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 5,
+  },
+  headerFlag: {
+    fontSize: 13,
   },
   headerMeta: {
     ...Typography.caption,
     color: Colors.muted,
-    marginTop: 3,
     fontWeight: '500',
   },
   settingsBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#FFFFFF',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.xs,
+    borderColor: 'rgba(255,255,255,0.7)',
+    ...Shadows.sm,
   },
 
   /* Hero card */
   heroCardWrap: {
-    borderRadius: 24,
+    borderRadius: 26,
     overflow: 'hidden',
-    marginBottom: 28,
-    ...Shadows.lg,
+    marginBottom: 30,
+    ...Shadows.xl,
   },
   heroCard: {
-    borderRadius: 24,
+    borderRadius: 26,
     padding: 22,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   heroGlow: {
     position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
     backgroundColor: '#14B8A6',
-    opacity: 0.12,
-    top: -60,
-    right: -40,
+    opacity: 0.14,
+    top: -70,
+    right: -50,
+  },
+  heroGlowWarm: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: '#F59E0B',
+    opacity: 0.07,
+    bottom: -60,
+    left: -40,
+  },
+  heroEyebrow: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: 'rgba(45,212,191,0.9)',
+    letterSpacing: 1.6,
+    marginBottom: 14,
   },
   heroTop: {
     flexDirection: 'row',
@@ -593,16 +690,22 @@ const styles = StyleSheet.create({
   },
   heroCategories: {
     flexDirection: 'row',
-    gap: 0,
     flexWrap: 'wrap',
-    rowGap: 8,
+    gap: 8,
     marginBottom: 20,
   },
   heroCatItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    width: '50%',
+    gap: 7,
+    width: '47.5%',
+    flexGrow: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.07)',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 11,
   },
   heroCatDot: {
     width: 7,
@@ -611,8 +714,9 @@ const styles = StyleSheet.create({
   },
   heroCatLabel: {
     ...Typography.caption,
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(255,255,255,0.62)',
     fontWeight: '500',
+    flex: 1,
   },
   heroCatStatus: {
     ...Typography.caption,
@@ -679,12 +783,23 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 28,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    marginBottom: 13,
+  },
+  sectionAccent: {
+    width: 4,
+    height: 17,
+    borderRadius: 2,
+    backgroundColor: Colors.teal,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#0F172A',
     letterSpacing: -0.2,
-    marginBottom: 12,
   },
 
   /* Next step card */
@@ -692,25 +807,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.sm,
+    borderColor: Colors.borderLight,
+    ...Shadows.md,
   },
   nextStepAccent: {
-    width: 4,
+    width: 5,
     alignSelf: 'stretch',
-    backgroundColor: Colors.teal,
-    borderTopLeftRadius: 18,
-    borderBottomLeftRadius: 18,
+  },
+  nextStepIconBubble: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    backgroundColor: Colors.mint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 14,
   },
   nextStepBody: {
     flex: 1,
-    paddingVertical: 16,
-    paddingLeft: 14,
+    paddingVertical: 15,
+    paddingLeft: 12,
     paddingRight: 8,
     gap: 3,
+  },
+  nextStepEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.teal,
+    letterSpacing: 1,
+    marginBottom: 1,
   },
   nextStepTitle: {
     fontSize: 15,
@@ -750,47 +878,68 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 14,
     gap: 14,
     borderWidth: 1,
-    borderColor: Colors.border,
-    ...Shadows.xs,
+    borderColor: Colors.borderLight,
+    ...Shadows.sm,
   },
   tripIconBubble: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 46,
+    height: 46,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.04)',
   },
   tripIcon: {
-    fontSize: 20,
+    fontSize: 21,
   },
   tripCardText: {
     flex: 1,
     gap: 2,
   },
   tripCardLabel: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
+    letterSpacing: -0.1,
   },
   tripCardSub: {
     ...Typography.caption,
     color: Colors.muted,
   },
+  tripChevron: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   /* Day 1 card */
   day1Card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.borderLight,
     gap: 12,
-    ...Shadows.sm,
+    overflow: 'hidden',
+    ...Shadows.md,
+  },
+  day1Glow: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(20,184,166,0.07)',
+    top: -50,
+    right: -40,
   },
   day1Header: {
     flexDirection: 'row',
@@ -799,8 +948,8 @@ const styles = StyleSheet.create({
   },
   day1Badge: {
     backgroundColor: '#0F172A',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
     borderRadius: 999,
   },
   day1BadgeText: {
@@ -848,11 +997,11 @@ const styles = StyleSheet.create({
 
   /* Trust card */
   trustCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 16,
+    padding: 15,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.borderLight,
     gap: 8,
     marginBottom: 16,
   },

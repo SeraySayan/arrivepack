@@ -7,8 +7,12 @@ import {
   ScrollView,
   Pressable,
   StatusBar,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ChevronDown } from 'lucide-react-native';
 import { router } from 'expo-router';
 import * as Haptics from '../../src/utils/haptics';
 import { useTripStore } from '../../src/store/tripStore';
@@ -23,6 +27,16 @@ import { Radii, Spacing } from '../../src/theme/spacing';
 import { Shadows } from '../../src/theme/shadows';
 import type { ReadinessStatus } from '../../src/types';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const animateLayout = () => {
+  if (Platform.OS !== 'web') {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  }
+};
+
 const ITEM_ID = 'entry_documents';
 
 const TRUST_META = {
@@ -34,16 +48,16 @@ const TRUST_META = {
 /* ─── Data ───────────────────────────────────────────────────── */
 
 const SETUP_STEPS = [
-  'Check your passport validity (min. 6 months beyond return date)',
-  'Confirm your visa requirement from an official source',
-  'Save digital copies of key documents before you fly',
+  { icon: '🛂', title: 'Passport', note: 'Valid 6+ months beyond return' },
+  { icon: '🪪', title: 'Visa', note: 'Confirm from an official source' },
+  { icon: '📄', title: 'Copies', note: 'Save digital documents' },
 ];
 
 const KEY_THINGS = [
-  'Passport validity and visa rules can vary by nationality — always check yours specifically.',
-  'Some travellers may be eligible for visa on arrival or an e-Visa applied for online.',
-  'Keep passport, accommodation proof, and return/onward travel details accessible at border.',
-  'Always confirm entry requirements with official or embassy sources before departure.',
+  { icon: '🌍', text: 'Visa & passport rules vary by nationality.' },
+  { icon: '🛂', text: 'Many travellers qualify for visa on arrival or e-Visa.' },
+  { icon: '📄', text: 'Keep passport, stay proof & onward travel ready.' },
+  { icon: '✅', text: 'Always confirm with official sources.' },
 ];
 
 const ENTRY_OPTIONS = [
@@ -51,10 +65,11 @@ const ENTRY_OPTIONS = [
     id: 'visa_on_arrival',
     icon: '✈️',
     title: 'Visa on arrival',
-    bestFor: 'Eligible travellers who prefer a simple arrival process',
-    cost: '~$25 USD (sample estimate — confirm before travel)',
-    pros: ['No advance paperwork needed', 'Available at Cairo Airport on arrival'],
-    watchOut: 'Eligibility and queue times can vary — confirm yours before travelling.',
+    bestFor: 'Eligible travellers who want a simple arrival',
+    cost: '~$25 USD · sample',
+    recommended: false,
+    pros: ['No advance paperwork', 'Available at Cairo Airport'],
+    watchOut: 'Confirm your eligibility before travelling.',
     link: {
       id: 'egypt-visa-onArrival',
       title: 'Egypt visa on arrival info',
@@ -70,10 +85,11 @@ const ENTRY_OPTIONS = [
     id: 'evisa',
     icon: '💻',
     title: 'Egypt e-Visa',
-    bestFor: 'Travellers who prefer confirming their visa before departure',
-    cost: '~$25 USD + processing (sample estimate)',
-    pros: ['Skip airport visa queues', 'Confirmed before you fly'],
-    watchOut: 'Apply well before your travel date. Official source recommended.',
+    bestFor: 'Confirming your visa before you fly',
+    cost: '~$25 USD + processing · sample',
+    recommended: true,
+    pros: ['Skip airport queues', 'Confirmed before departure'],
+    watchOut: 'Apply early via the official portal.',
     link: {
       id: 'egypt-evisa',
       title: 'Egypt e-Visa portal',
@@ -88,11 +104,12 @@ const ENTRY_OPTIONS = [
   {
     id: 'embassy_visa',
     icon: '🏛️',
-    title: 'Embassy visa / advance application',
-    bestFor: 'Nationalities not eligible for visa on arrival or e-Visa',
-    cost: 'Varies by nationality — confirm with your local embassy',
-    pros: ['Arranged ahead of time', 'Accepted for all eligible nationalities'],
-    watchOut: 'Contact your nearest Egyptian embassy early — lead times vary.',
+    title: 'Embassy / advance visa',
+    bestFor: 'Nationalities not eligible for VOA or e-Visa',
+    cost: 'Varies by nationality',
+    recommended: false,
+    pros: ['Arranged ahead of time', 'Accepted for all eligible'],
+    watchOut: 'Contact your embassy early — lead times vary.',
     link: {
       id: 'egypt-embassy',
       title: 'Egyptian embassy directory',
@@ -140,27 +157,84 @@ const SOURCE_LINKS = [
 ];
 
 const BEFORE_YOU_GO = [
-  'Check your nationality-specific visa requirement.',
-  'Confirm passport validity (min. 6 months beyond your return date).',
-  'Save digital copies of passport, visa, and accommodation booking.',
-  'Keep return/onward travel details accessible at border.',
-  'Keep emergency and embassy contact details saved.',
-  'Consider travel insurance covering medical and trip cancellation.',
+  'Visa requirement checked',
+  'Passport valid 6+ months',
+  'Document copies saved',
+  'Onward travel & contacts ready',
+  'Travel insurance considered',
 ];
 
-/* ─── Small reusable components ──────────────────────────────── */
+/* ─── Reusable presentational components ─────────────────────── */
 
-function SectionHeader({ title }: { title: string }) {
-  return <Text style={styles.sectionTitle}>{title}</Text>;
+function SectionHeader({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <View style={styles.sectionTitleRow}>
+      <View style={styles.sectionAccent} />
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
+    </View>
+  );
 }
 
-function CheckRow({ text, last = false }: { text: string; last?: boolean }) {
+type EntryOption = (typeof ENTRY_OPTIONS)[number];
+
+function EntryOptionCard({
+  opt,
+  expanded,
+  onToggle,
+}: {
+  opt: EntryOption;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <View style={[styles.checkRow, !last && styles.checkRowBorder]}>
-      <View style={styles.checkBox}>
-        <Text style={styles.checkMark}>○</Text>
-      </View>
-      <Text style={styles.checkText}>{text}</Text>
+    <View style={[styles.optionCard, opt.recommended && styles.optionCardRec]}>
+      {opt.recommended && (
+        <View style={styles.recRibbon}>
+          <Text style={styles.recRibbonText}>RECOMMENDED</Text>
+        </View>
+      )}
+
+      <Pressable onPress={onToggle} style={styles.optionTop}>
+        <View style={styles.optionIconBubble}>
+          <Text style={styles.optionIcon}>{opt.icon}</Text>
+        </View>
+        <View style={styles.optionHeaderText}>
+          <Text style={styles.optionTitle}>{opt.title}</Text>
+          <Text style={styles.optionBestFor} numberOfLines={2}>{opt.bestFor}</Text>
+        </View>
+        <View style={[styles.chevronWrap, expanded && styles.chevronWrapOpen]}>
+          <ChevronDown
+            size={18}
+            color={expanded ? Colors.teal : Colors.mutedLight}
+            strokeWidth={2.4}
+            style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}
+          />
+        </View>
+      </Pressable>
+
+      <Pressable onPress={onToggle} style={styles.costChip}>
+        <Text style={styles.costChipIcon}>💳</Text>
+        <Text style={styles.costChipValue}>{opt.cost}</Text>
+      </Pressable>
+
+      {expanded && (
+        <View style={styles.optionDetail}>
+          <View style={styles.proChipRow}>
+            {opt.pros.map((p, i) => (
+              <View key={i} style={styles.proChip}>
+                <Text style={styles.proChipCheck}>✓</Text>
+                <Text style={styles.proChipText}>{p}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.watchCard}>
+            <Text style={styles.watchIcon}>⚠</Text>
+            <Text style={styles.watchText}>{opt.watchOut}</Text>
+          </View>
+          <ExternalLinkCard link={opt.link} />
+        </View>
+      )}
     </View>
   );
 }
@@ -171,6 +245,7 @@ export default function EntryDocumentsScreen() {
   const { trip, updateReadinessItem } = useTripStore();
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>('evisa');
 
   const readinessItem = trip?.readiness.items.find((i) => i.id === ITEM_ID);
   const status: ReadinessStatus = readinessItem?.status ?? 'needs_review';
@@ -189,9 +264,27 @@ export default function EntryDocumentsScreen() {
     showToast(isReady ? 'Status updated' : 'Entry & Documents marked as ready ✅');
   };
 
+  const toggleOption = (id: string) => {
+    Haptics.selectionAsync();
+    animateLayout();
+    setExpandedId((cur) => (cur === id ? null : id));
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
+
+      {/* Cinematic ambient background */}
+      <LinearGradient
+        colors={['#EAF3F2', '#F1F5F8', '#F8FAFC']}
+        locations={[0, 0.4, 1]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 0.9 }}
+        style={styles.ambientBg}
+        pointerEvents="none"
+      />
+      <View style={styles.ambientBlob} pointerEvents="none" />
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
 
         {/* Back */}
@@ -201,16 +294,17 @@ export default function EntryDocumentsScreen() {
 
         {/* ── 1. Hero ── */}
         <LinearGradient
-          colors={['#0F172A', '#0F2E2B']}
+          colors={['#0B1220', '#0F2E2B', '#0C3742']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.heroCard}
         >
           <View style={styles.heroGlow} />
-          <Text style={styles.heroIcon}>🛂</Text>
+          <View style={styles.heroGlowWarm} />
+          <Text style={styles.heroEyebrow}>ENTRY REQUIREMENTS</Text>
           <Text style={styles.heroTitle}>Entry & Documents</Text>
           <Text style={styles.heroSub}>
-            Confirm what you need to enter Egypt: passport validity, visa rules, and key travel documents.
+            What you need to enter Egypt — at a glance.
           </Text>
           <View style={styles.heroBadges}>
             <StatusPill status={status} />
@@ -218,81 +312,66 @@ export default function EntryDocumentsScreen() {
           </View>
         </LinearGradient>
 
-        {/* ── 2. Recommended setup ── */}
+        {/* ── 2. Best path — visual stepper ── */}
         <View style={styles.section}>
-          <SectionHeader title="Recommended for your trip" />
-          <View style={styles.setupCard}>
-            <View style={styles.setupHeader}>
-              <View style={styles.setupIconBubble}>
-                <Text style={styles.setupCheckIcon}>✓</Text>
-              </View>
-              <Text style={styles.setupTitle}>
-                Confirm your nationality-specific visa rules, check passport validity, and keep your key travel documents ready before departure.
-              </Text>
+          <SectionHeader title="Best path for most travellers" />
+          <View style={styles.stepperCard}>
+            <View style={styles.stepperGlow} pointerEvents="none" />
+            <View style={styles.stepperRow}>
+              {SETUP_STEPS.map((step, i) => (
+                <React.Fragment key={i}>
+                  <View style={styles.stepItem}>
+                    <View style={styles.stepBubble}>
+                      <Text style={styles.stepEmoji}>{step.icon}</Text>
+                      <View style={styles.stepNumBadge}>
+                        <Text style={styles.stepNumText}>{i + 1}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.stepTitle}>{step.title}</Text>
+                    <Text style={styles.stepNote}>{step.note}</Text>
+                  </View>
+                  {i < SETUP_STEPS.length - 1 && <View style={styles.stepConnector} />}
+                </React.Fragment>
+              ))}
             </View>
-            <View style={styles.setupDivider} />
-            {SETUP_STEPS.map((step, i) => (
-              <View key={i} style={styles.setupStepRow}>
-                <View style={styles.setupStepNum}>
-                  <Text style={styles.setupStepNumText}>{i + 1}</Text>
-                </View>
-                <Text style={styles.setupStepText}>{step}</Text>
-              </View>
-            ))}
           </View>
         </View>
 
-        {/* ── 3. Key things to know ── */}
+        {/* ── 3. Entry options (expandable) ── */}
         <View style={styles.section}>
-          <SectionHeader title="What you need to know" />
-          <View style={styles.bulletCard}>
-            {KEY_THINGS.map((point, i) => (
-              <View key={i} style={[styles.bulletRow, i < KEY_THINGS.length - 1 && styles.bulletRowBorder]}>
-                <View style={styles.bulletDot} />
-                <Text style={styles.bulletText}>{point}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* ── 4. Entry options ── */}
-        <View style={styles.section}>
-          <SectionHeader title="Entry options" />
+          <SectionHeader title="Entry options" hint="Tap to expand" />
           <View style={styles.optionsList}>
             {ENTRY_OPTIONS.map((opt) => (
-              <View key={opt.id} style={styles.optionCard}>
-                <View style={styles.optionHeader}>
-                  <Text style={styles.optionIcon}>{opt.icon}</Text>
-                  <Text style={styles.optionTitle}>{opt.title}</Text>
+              <EntryOptionCard
+                key={opt.id}
+                opt={opt}
+                expanded={expandedId === opt.id}
+                onToggle={() => toggleOption(opt.id)}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* ── 4. What you need to know — icon tiles ── */}
+        <View style={styles.section}>
+          <SectionHeader title="What you need to know" />
+          <View style={styles.factGrid}>
+            {KEY_THINGS.map((fact, i) => (
+              <View key={i} style={styles.factTile}>
+                <View style={styles.factIconCircle}>
+                  <Text style={styles.factIcon}>{fact.icon}</Text>
                 </View>
-                <Text style={styles.optionBestFor}>Best for: {opt.bestFor}</Text>
-                <View style={styles.costRow}>
-                  <Text style={styles.costLabel}>Est. cost</Text>
-                  <Text style={styles.costValue}>{opt.cost}</Text>
-                </View>
-                <View style={styles.prosList}>
-                  {opt.pros.map((p, i) => (
-                    <View key={i} style={styles.proRow}>
-                      <Text style={styles.proCheck}>✓</Text>
-                      <Text style={styles.proText}>{p}</Text>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.watchCard}>
-                  <Text style={styles.watchIcon}>⚠</Text>
-                  <Text style={styles.watchText}>{opt.watchOut}</Text>
-                </View>
-                <ExternalLinkCard link={opt.link} />
+                <Text style={styles.factText}>{fact.text}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        {/* ── 5. Official links ── */}
+        {/* ── 5. Official sources ── */}
         <View style={styles.section}>
           <SectionHeader title="Official sources" />
           <Text style={styles.linksNote}>
-            Always verify before use. Confirm your specific rules with official government or embassy sources.
+            Always verify your specific rules with official government or embassy sources.
           </Text>
           <View style={styles.linksList}>
             {SOURCE_LINKS.map((link) => (
@@ -301,12 +380,17 @@ export default function EntryDocumentsScreen() {
           </View>
         </View>
 
-        {/* ── 6. Before you go checklist ── */}
+        {/* ── 6. Before you go — check grid ── */}
         <View style={styles.section}>
           <SectionHeader title="Before you go" />
-          <View style={styles.checklistCard}>
+          <View style={styles.checkGrid}>
             {BEFORE_YOU_GO.map((item, i) => (
-              <CheckRow key={i} text={item} last={i === BEFORE_YOU_GO.length - 1} />
+              <View key={i} style={styles.checkTile}>
+                <View style={styles.checkCircle}>
+                  <Text style={styles.checkTick}>✓</Text>
+                </View>
+                <Text style={styles.checkTileText}>{item}</Text>
+              </View>
             ))}
           </View>
         </View>
@@ -315,7 +399,7 @@ export default function EntryDocumentsScreen() {
         <View style={styles.warningCard}>
           <Text style={styles.warningIcon}>⚠️</Text>
           <Text style={styles.warningText}>
-            Always confirm your specific entry requirements with official government sources or the Egyptian embassy before departure. This information is sample data and may not reflect current rules.
+            Sample data. Always confirm your entry requirements with official government or embassy sources before departure.
           </Text>
         </View>
 
@@ -324,7 +408,7 @@ export default function EntryDocumentsScreen() {
           <Text style={styles.ctaHelper}>
             {isReady
               ? 'Entry & Documents is marked ready. Tap to undo.'
-              : 'Mark this as ready after you confirm your visa requirement and passport validity.'}
+              : 'Mark ready after you confirm your visa and passport validity.'}
           </Text>
           <AppButton
             label={isReady ? '✓ I checked this — tap to undo' : 'I checked this — mark as ready'}
@@ -345,6 +429,16 @@ export default function EntryDocumentsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
+  ambientBg: { ...StyleSheet.absoluteFillObject },
+  ambientBlob: {
+    position: 'absolute',
+    top: -80,
+    right: -70,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(20,184,166,0.09)',
+  },
   content: {
     paddingHorizontal: Spacing.screenH,
     paddingBottom: 110,
@@ -359,145 +453,192 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: Radii.cardLg,
     padding: Spacing.xl,
-    gap: Spacing.sm,
+    gap: 6,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    ...Shadows.lg,
   },
   heroGlow: {
     position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     backgroundColor: '#14B8A6',
-    opacity: 0.12,
-    top: -50,
-    right: -40,
+    opacity: 0.14,
+    top: -60,
+    right: -45,
   },
-  heroIcon: { fontSize: 36, marginBottom: 4 },
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.3,
+  heroGlowWarm: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#F59E0B',
+    opacity: 0.06,
+    bottom: -50,
+    left: -30,
   },
-  heroSub: {
-    ...Typography.body,
-    color: 'rgba(255,255,255,0.68)',
-    lineHeight: 22,
+  heroEyebrow: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: 'rgba(45,212,191,0.9)',
+    letterSpacing: 1.6,
+    marginBottom: 2,
   },
+  heroTitle: { fontSize: 25, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.4 },
+  heroSub: { ...Typography.body, color: 'rgba(255,255,255,0.68)', lineHeight: 21 },
   heroBadges: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
-    marginTop: 4,
+    marginTop: 8,
     flexWrap: 'wrap',
   },
 
   /* Sections */
   section: { gap: Spacing.sm },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#0F172A',
-    letterSpacing: -0.2,
-  },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  sectionAccent: { width: 4, height: 16, borderRadius: 2, backgroundColor: Colors.teal },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#0F172A', letterSpacing: -0.2 },
+  sectionHint: { ...Typography.caption, color: Colors.mutedLight, marginLeft: 'auto', fontWeight: '500' },
 
-  /* Setup card (recommended) */
-  setupCard: {
+  /* Stepper card */
+  stepperCard: {
     backgroundColor: Colors.cardWhite,
-    borderRadius: Radii.card,
+    borderRadius: Radii.cardLg,
     borderWidth: 1.5,
-    borderColor: Colors.teal + '30',
+    borderColor: Colors.teal + '2E',
     padding: Spacing.cardPad,
-    gap: Spacing.sm,
-    ...Shadows.sm,
+    overflow: 'hidden',
+    ...Shadows.md,
   },
-  setupHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
-  setupIconBubble: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.teal,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
+  stepperGlow: {
+    position: 'absolute',
+    top: -50,
+    right: -40,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: 'rgba(20,184,166,0.07)',
   },
-  setupCheckIcon: { fontSize: 14, color: '#FFFFFF', fontWeight: '800' },
-  setupTitle: { ...Typography.body, color: Colors.textSecondary, flex: 1, lineHeight: 22 },
-  setupDivider: { height: 1, backgroundColor: Colors.border },
-  setupStepRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start' },
-  setupStepNum: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+  stepperRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  stepItem: { flex: 1, alignItems: 'center', gap: 4 },
+  stepBubble: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: Colors.mint,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
-    marginTop: 1,
-  },
-  setupStepNumText: { fontSize: 11, fontWeight: '700', color: Colors.tealDark },
-  setupStepText: { ...Typography.body, color: Colors.textSecondary, flex: 1, lineHeight: 22 },
-
-  /* Bullet card */
-  bulletCard: {
-    backgroundColor: Colors.cardWhite,
-    borderRadius: Radii.card,
     borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
-    ...Shadows.xs,
+    borderColor: Colors.teal + '33',
+    marginBottom: 4,
   },
-  bulletRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    alignItems: 'flex-start',
-    paddingVertical: 11,
-    paddingHorizontal: Spacing.base,
-  },
-  bulletRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  bulletDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  stepEmoji: { fontSize: 24 },
+  stepNumBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: Colors.teal,
-    marginTop: 8,
-    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.cardWhite,
   },
-  bulletText: { ...Typography.body, color: Colors.textSecondary, flex: 1, lineHeight: 21 },
+  stepNumText: { fontSize: 10, fontWeight: '800', color: '#FFFFFF' },
+  stepTitle: { fontSize: 13, fontWeight: '700', color: Colors.text },
+  stepNote: { ...Typography.caption, color: Colors.muted, textAlign: 'center', lineHeight: 15, fontSize: 11 },
+  stepConnector: {
+    height: 2,
+    flex: 0.5,
+    backgroundColor: Colors.borderLight,
+    marginTop: 27,
+    borderRadius: 1,
+  },
 
-  /* Option cards */
-  optionsList: { gap: Spacing.sm },
+  /* Option cards (expandable) */
+  optionsList: { gap: Spacing.md },
   optionCard: {
     backgroundColor: Colors.cardWhite,
-    borderRadius: Radii.card,
+    borderRadius: Radii.cardLg,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.borderLight,
     padding: Spacing.cardPad,
     gap: Spacing.sm,
-    ...Shadows.xs,
+    overflow: 'hidden',
+    ...Shadows.sm,
   },
-  optionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  optionIcon: { fontSize: 22 },
-  optionTitle: { fontSize: 15, fontWeight: '700', color: Colors.text, flex: 1 },
-  optionBestFor: { ...Typography.caption, color: Colors.teal, fontWeight: '600', lineHeight: 18 },
-  costRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  optionCardRec: {
+    borderColor: Colors.teal + '55',
+    borderWidth: 1.5,
+  },
+  recRibbon: {
+    position: 'absolute',
+    top: 12,
+    right: -32,
+    backgroundColor: Colors.teal,
+    paddingHorizontal: 34,
+    paddingVertical: 3,
+    transform: [{ rotate: '45deg' }],
+  },
+  recRibbonText: { fontSize: 8.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.6 },
+  optionTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  optionIconBubble: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    backgroundColor: Colors.background,
     alignItems: 'center',
-    backgroundColor: Colors.borderLight,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 7,
-    borderRadius: Radii.sm,
+    justifyContent: 'center',
+    flexShrink: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(15,23,42,0.04)',
   },
-  costLabel: { ...Typography.caption, color: Colors.muted },
-  costValue: { ...Typography.caption, color: Colors.text, fontWeight: '600', flex: 1, textAlign: 'right' },
-  prosList: { gap: 5 },
-  proRow: { flexDirection: 'row', gap: 7, alignItems: 'flex-start' },
-  proCheck: { fontSize: 12, color: Colors.success, marginTop: 2, flexShrink: 0 },
-  proText: { ...Typography.caption, color: Colors.textSecondary, flex: 1, lineHeight: 18 },
+  optionIcon: { fontSize: 22 },
+  optionHeaderText: { flex: 1, gap: 2 },
+  optionTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, letterSpacing: -0.2 },
+  optionBestFor: { ...Typography.caption, color: Colors.teal, fontWeight: '600', lineHeight: 16 },
+  chevronWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  chevronWrapOpen: { backgroundColor: Colors.mint },
+  costChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.background,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: Radii.sm,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  costChipIcon: { fontSize: 12 },
+  costChipValue: { ...Typography.caption, color: Colors.text, fontWeight: '700' },
+  optionDetail: { gap: Spacing.sm, paddingTop: 2 },
+  proChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  proChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.successLight,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  proChipCheck: { fontSize: 11, color: Colors.success, fontWeight: '800' },
+  proChipText: { ...Typography.caption, color: Colors.tealDark, fontWeight: '600' },
   watchCard: {
     flexDirection: 'row',
     gap: 7,
@@ -510,43 +651,67 @@ const styles = StyleSheet.create({
   watchIcon: { fontSize: 12, color: Colors.warning, marginTop: 2, flexShrink: 0 },
   watchText: { ...Typography.caption, color: '#92400E', flex: 1, lineHeight: 18 },
 
+  /* Fact tiles */
+  factGrid: { gap: Spacing.sm },
+  factTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.cardWhite,
+    borderRadius: Radii.card,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.base,
+    ...Shadows.xs,
+  },
+  factIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Colors.mint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  factIcon: { fontSize: 18 },
+  factText: { ...Typography.bodySm, color: Colors.textSecondary, flex: 1, lineHeight: 19, fontWeight: '500' },
+
   /* Links */
   linksNote: { ...Typography.caption, color: Colors.mutedLight, lineHeight: 17 },
   linksList: { gap: Spacing.sm },
 
-  /* Checklist */
-  checklistCard: {
+  /* Check grid */
+  checkGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  checkTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '47.5%',
+    flexGrow: 1,
     backgroundColor: Colors.cardWhite,
     borderRadius: Radii.card,
     borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: 'hidden',
+    borderColor: Colors.borderLight,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
     ...Shadows.xs,
   },
-  checkRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    alignItems: 'flex-start',
-    paddingVertical: 12,
-    paddingHorizontal: Spacing.base,
-  },
-  checkRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  checkBox: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+  checkCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.mint,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    marginTop: 2,
   },
-  checkMark: { fontSize: 9, color: Colors.mutedLight },
-  checkText: { ...Typography.body, color: Colors.textSecondary, flex: 1, lineHeight: 21 },
+  checkTick: { fontSize: 11, color: Colors.tealDark, fontWeight: '800' },
+  checkTileText: { ...Typography.caption, color: Colors.textSecondary, flex: 1, fontWeight: '500', lineHeight: 16 },
 
   /* Warning */
   warningCard: {
@@ -559,8 +724,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.yellow + '50',
     alignItems: 'flex-start',
   },
-  warningIcon: { fontSize: 18, flexShrink: 0 },
-  warningText: { ...Typography.body, color: '#92400E', flex: 1, lineHeight: 22 },
+  warningIcon: { fontSize: 17, flexShrink: 0 },
+  warningText: { ...Typography.bodySm, color: '#92400E', flex: 1, lineHeight: 20 },
 
   /* CTA */
   ctaSection: { gap: Spacing.sm },
